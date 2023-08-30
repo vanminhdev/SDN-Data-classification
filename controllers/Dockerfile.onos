@@ -1,0 +1,15 @@
+FROM onosproject/onos
+
+USER root
+RUN apt-get update && \
+    apt-get install -y curl net-tools iputils-ping
+
+RUN apt-get install -y telnet
+
+ENV JAVA_DEBUG_PORT="0.0.0.0:5005"
+
+# Lệnh khởi động ONOS khi container chạy
+CMD ["onos-service"]
+
+HEALTHCHECK --interval=30s --timeout=10s --retries=3 \
+    CMD curl -f http://localhost:8181/onos/ui/login.html || exit 1

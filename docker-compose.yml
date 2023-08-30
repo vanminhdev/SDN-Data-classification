@@ -1,0 +1,61 @@
+version: '3.8'
+services:
+  mininet:
+    image: sdn-mininet:latest
+    container_name: mininet-test
+    build:
+      context: ./mininet
+      dockerfile: Dockerfile
+    environment:
+      - INIT_NET=/scripts/init_net.py
+    privileged: true
+    volumes:
+      - $PWD/mininet/scripts:/scripts
+      - $PWD/mininet/kernel/modules:/lib/modules
+    networks:
+      sdn_network:
+        ipv4_address: 192.168.0.100
+    depends_on:
+      controller1:
+        condition: service_healthy
+      controller2:
+        condition: service_healthy
+    #command: ["python3", "/scripts/demo.py"]
+
+  controller1:
+    image: sdn-controller:latest
+    container_name: controller1
+    build:
+      context: ./controllers
+      dockerfile: Dockerfile.onos
+    environment:
+      - ONOS_APPS="drivers,hostprovider,lldpprovider,gui2,openflow-base,openflow,optical-model"
+    ports:
+      - 8181:8181
+      - 5005:5005
+    networks:
+      sdn_network:
+        ipv4_address: 192.168.0.2
+
+  controller2:
+    image: sdn-controller:latest
+    container_name: controller2
+    build:
+      context: ./controllers
+      dockerfile: Dockerfile.onos
+    environment:
+      - ONOS_APPS="drivers,hostprovider,lldpprovider,gui2,openflow-base,openflow,optical-model"
+    ports:
+      - 8182:8181
+    networks:
+      sdn_network:
+        ipv4_address: 192.168.0.3
+
+networks:
+  sdn_network:
+    driver: bridge
+    ipam:
+      driver: default
+      config:
+        - subnet: 192.168.0.1/24
+          gateway: 192.168.0.1
