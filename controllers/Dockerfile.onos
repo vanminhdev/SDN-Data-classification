@@ -1,4 +1,4 @@
-FROM onosproject/onos
+FROM onosproject/onos:2.7-latest
 
 USER root
 RUN apt-get update && \
@@ -6,7 +6,16 @@ RUN apt-get update && \
 
 RUN apt-get install -y telnet
 
-ENV JAVA_DEBUG_PORT="0.0.0.0:5005"
+ENV JAVA_TOOL_OPTIONS="-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5005 $JAVA_TOOL_OPTIONS"
+
+ARG ONOS_DATA_CLASSIFICATION_OAR
+ARG ONOS_DATA_CLASSIFICATION_VERSION
+
+#App oar
+COPY onos-app/data-classification/target/$ONOS_DATA_CLASSIFICATION_OAR /root/onos/apps/vn.edu.huce.data-classification/vn.edu.huce.data-classification.oar
+COPY onos-app/data-classification/target/oar/app.xml /root/onos/apps/vn.edu.huce.data-classification/app.xml
+#Artifact
+COPY onos-app/data-classification/target/oar/m2/vn/edu/huce/data-classification/$ONOS_DATA_CLASSIFICATION_VERSION/data-classification-$ONOS_DATA_CLASSIFICATION_VERSION-features.xml /root/onos/apache-karaf-4.2.14/system/m2/vn/edu/huce/data-classification/$ONOS_DATA_CLASSIFICATION_VERSION/data-classification-$ONOS_DATA_CLASSIFICATION_VERSION-features.xml
 
 # Lệnh khởi động ONOS khi container chạy
 CMD ["onos-service"]

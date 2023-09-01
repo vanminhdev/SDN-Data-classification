@@ -1,2 +1,1 @@
-docker build -t my-ubuntu-image -f ./controllers/Dockerfile .
-docker run -it --rm --name my-ubuntu -p 80:80 my-ubuntu-image
+#mn --controller=remote,ip=192.168.0.3,port=6653 --switch=ovs,protocols=OpenFlow13 --topo=tree,depth=1,fanout=2

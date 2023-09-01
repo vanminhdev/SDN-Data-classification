@@ -62,11 +62,6 @@ controllers['c2'] = net.addController('c2', controller=RemoteController, ip='192
 for key in controllers.keys():
     controllers[key].start()
 
-#for ctl in map_switch_controller.keys():
-#    for swt in map_switch_controller[ctl]:
-#	print(ctl, swt)
-#	switches[swt].start([controllers[ctl]])
-
 #switches["s1"].stop()
 switches["s1"].start([controllers["c1"]])
 switches["s2"].start([controllers["c1"]])

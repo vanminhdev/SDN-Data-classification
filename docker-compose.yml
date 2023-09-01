@@ -6,6 +6,11 @@ services:
     build:
       context: ./mininet
       dockerfile: Dockerfile
+    depends_on:
+      controller1:
+        condition: service_healthy
+      controller2:
+        condition: service_healthy
     environment:
       - INIT_NET=/scripts/init_net.py
     privileged: true
@@ -15,38 +20,43 @@ services:
     networks:
       sdn_network:
         ipv4_address: 192.168.0.100
-    depends_on:
-      controller1:
-        condition: service_healthy
-      controller2:
-        condition: service_healthy
-    #command: ["python3", "/scripts/demo.py"]
 
   controller1:
-    image: sdn-controller:latest
+    image: onos-controller:latest
     container_name: controller1
     build:
       context: ./controllers
       dockerfile: Dockerfile.onos
+      args:
+        - ONOS_DATA_CLASSIFICATION_OAR=${ONOS_DATA_CLASSIFICATION_OAR}
+        - ONOS_DATA_CLASSIFICATION_VERSION=${ONOS_DATA_CLASSIFICATION_VERSION}
     environment:
-      - ONOS_APPS="drivers,hostprovider,lldpprovider,gui2,openflow-base,openflow,optical-model"
+      - ONOS_APPS="drivers,hostprovider,lldpprovider,gui2,vn.edu.huce.data-classification,openflow-base,openflow,optical-model"
     ports:
       - 8181:8181
       - 5005:5005
+    command: >
+      bash -c '
+        onos-service
+      '
     networks:
       sdn_network:
         ipv4_address: 192.168.0.2
 
   controller2:
-    image: sdn-controller:latest
+    image: onos-controller:latest
     container_name: controller2
-    build:
-      context: ./controllers
-      dockerfile: Dockerfile.onos
+    depends_on: #không build image mà lấy image từ controller1
+      - controller1
     environment:
       - ONOS_APPS="drivers,hostprovider,lldpprovider,gui2,openflow-base,openflow,optical-model"
     ports:
       - 8182:8181
+      - 5006:5005
+    command: >
+      bash -c '
+        onos-service
+      '
     networks:
       sdn_network:
         ipv4_address: 192.168.0.3
