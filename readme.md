@@ -40,6 +40,11 @@
     - với file java: `find . -name "*.java" -type f -exec dos2unix {} \;`
     - với tất cả các file: `find . -type f -exec dos2unix {} \;`
     - cấu hình git: `git config core.autocrlf false` cho local repo
+- kích hoạt app:
+    - cấu hình qua environment variable `ONOS_APPS`, lưu ý sẽ bị lỗi app đầu và app cuối nên để cuối cùng bằng dấu `,`
+        - vd: `ONOS_APPS="drivers,hostprovider,lldpprovider,gui2,vn.edu.huce.data-classification,fwd,openflow,"`
+    - `Reactive Forwarding` - `org.onosproject.fwd`: có tác dụng xử lý chuyển tiếp gói tin mạng dựa trên cơ sở phản ứng. Thay vì cấu hình trước một bảng chuyển tiếp (flow table) để xử lý gói tin, Reactive Forwarding xác định cách xử lý gói tin dựa trên sự phản ứng của mạng khi gói tin đến. Kịch hoạt ứng dụng này thì có thể ping được
+    - `OpenFlow Provider Suite` - `org.onosproject.openflow`: là một tập hợp các ứng dụng cung cấp khả năng hỗ trợ giao thức OpenFlow, một giao thức quản lý mạng SDN phổ biến. Nó cho phép ONOS tương tác với các thiết bị mạng (switches và routers) hỗ trợ OpenFlow để cấu hình và điều khiển chúng.
 4. mininet
 - xem version: `mn --version`
 - chạy thử kết nối đến onos: `mn --controller=remote,ip=192.168.0.2,port=6653 --switch=ovs,protocols=OpenFlow13`

@@ -4,6 +4,8 @@ USER root
 RUN apt-get update && \
     apt-get install -y mininet net-tools curl iputils-ping python3 python3-pip iproute2 wget unzip openvswitch-switch
 
+RUN apt-get install -y xterm
+
 # Install Mininet
 RUN pip3 install mininet
 

@@ -31,7 +31,7 @@ services:
         - ONOS_DATA_CLASSIFICATION_OAR=${ONOS_DATA_CLASSIFICATION_OAR}
         - ONOS_DATA_CLASSIFICATION_VERSION=${ONOS_DATA_CLASSIFICATION_VERSION}
     environment:
-      - ONOS_APPS="drivers,hostprovider,lldpprovider,gui2,vn.edu.huce.data-classification,openflow-base,openflow,optical-model"
+      - ONOS_APPS="drivers,hostprovider,lldpprovider,gui2,vn.edu.huce.data-classification,fwd,openflow,"
     ports:
       - 8181:8181
       - 5005:5005
@@ -49,7 +49,7 @@ services:
     depends_on: #không build image mà lấy image từ controller1
       - controller1
     environment:
-      - ONOS_APPS="drivers,hostprovider,lldpprovider,gui2,openflow-base,openflow,optical-model"
+      - ONOS_APPS="drivers,hostprovider,lldpprovider,gui2,fwd,openflow,"
     ports:
       - 8182:8181
       - 5006:5005
