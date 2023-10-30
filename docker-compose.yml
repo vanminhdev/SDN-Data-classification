@@ -17,6 +17,13 @@ services:
     volumes:
       - $PWD/mininet/scripts:/scripts
       - $PWD/mininet/kernel/modules:/lib/modules
+    command: >
+      bash -c '
+        touch /etc/network/interfaces;
+        service openvswitch-switch start;
+        #python3 /scripts/init_net.py;
+        tail -f /dev/null
+      '
     networks:
       sdn_network:
         ipv4_address: 192.168.0.100
@@ -31,7 +38,7 @@ services:
         - ONOS_DATA_CLASSIFICATION_OAR=${ONOS_DATA_CLASSIFICATION_OAR}
         - ONOS_DATA_CLASSIFICATION_VERSION=${ONOS_DATA_CLASSIFICATION_VERSION}
     environment:
-      - ONOS_APPS="drivers,hostprovider,lldpprovider,gui2,vn.edu.huce.data-classification,fwd,openflow,"
+      - ONOS_APPS="drivers,hostprovider,lldpprovider,gui2,fwd,openflow,openflow-base,optical-model"
     ports:
       - 8181:8181
       - 5005:5005

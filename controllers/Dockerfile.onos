@@ -13,9 +13,9 @@ ARG ONOS_DATA_CLASSIFICATION_VERSION
 
 #App oar
 COPY onos-app/data-classification/target/$ONOS_DATA_CLASSIFICATION_OAR /root/onos/apps/vn.edu.huce.data-classification/vn.edu.huce.data-classification.oar
-COPY onos-app/data-classification/target/oar/app.xml /root/onos/apps/vn.edu.huce.data-classification/app.xml
+#COPY onos-app/data-classification/target/oar/app.xml /root/onos/apps/vn.edu.huce.data-classification/app.xml
 #Artifact
-COPY onos-app/data-classification/target/oar/m2/vn/edu/huce/data-classification/$ONOS_DATA_CLASSIFICATION_VERSION/data-classification-$ONOS_DATA_CLASSIFICATION_VERSION-features.xml /root/onos/apache-karaf-4.2.14/system/m2/vn/edu/huce/data-classification/$ONOS_DATA_CLASSIFICATION_VERSION/data-classification-$ONOS_DATA_CLASSIFICATION_VERSION-features.xml
+#COPY onos-app/data-classification/target/oar/m2/vn/edu/huce/data-classification/$ONOS_DATA_CLASSIFICATION_VERSION/data-classification-$ONOS_DATA_CLASSIFICATION_VERSION-features.xml /root/onos/apache-karaf-4.2.14/system/vn/edu/huce/data-classification/$ONOS_DATA_CLASSIFICATION_VERSION/data-classification-$ONOS_DATA_CLASSIFICATION_VERSION-features.xml
 
 # Lệnh khởi động ONOS khi container chạy
 CMD ["onos-service"]

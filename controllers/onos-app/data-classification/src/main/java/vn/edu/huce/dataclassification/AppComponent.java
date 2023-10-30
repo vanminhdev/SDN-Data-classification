@@ -16,6 +16,8 @@
 package vn.edu.huce.dataclassification;
 
 import org.onosproject.cfg.ComponentConfigService;
+import org.onosproject.net.packet.PacketProcessor;
+import org.onosproject.net.packet.PacketService;
 import org.osgi.service.component.ComponentContext;
 import org.osgi.service.component.annotations.Activate;
 import org.osgi.service.component.annotations.Component;
@@ -35,30 +37,46 @@ import static org.onlab.util.Tools.get;
  * Skeletal ONOS application component.
  */
 @Component(immediate = true,
-           service = {SomeInterface.class},
-           property = {
-               "someProperty=Some Default String Value",
-           })
+        service = {SomeInterface.class},
+        property = {
+                "someProperty=Some Default String Value",
+        })
 public class AppComponent implements SomeInterface {
 
     private final Logger log = LoggerFactory.getLogger(getClass());
 
-    /** Some configurable property. */
+    /**
+     * Some configurable property.
+     */
     private String someProperty;
 
     @Reference(cardinality = ReferenceCardinality.MANDATORY)
     protected ComponentConfigService cfgService;
+    @Reference
+    private PacketService packetService;
+
+    private PacketProcessor packetProcessor = new MyPacketProcessor();
+    @Reference
+    private PacketProcessor natRoutingPacketProcessor;
 
     @Activate
     protected void activate() {
         cfgService.registerProperties(getClass());
-        log.info("Started");
+        if (packetService != null) {
+            packetService.addProcessor(packetProcessor, PacketProcessor.director(0));
+            packetService.addProcessor(natRoutingPacketProcessor, PacketProcessor.director(0));
+        }
+        log.info("Data Classification is Started");
     }
 
     @Deactivate
     protected void deactivate() {
         cfgService.unregisterProperties(getClass(), false);
-        log.info("Stopped");
+        if (packetService != null) {
+            packetService.removeProcessor(packetProcessor);
+            packetService.removeProcessor(natRoutingPacketProcessor);
+        }
+        log.info("Data Classification is Stopped");
     }
 
     @Modified
@@ -67,12 +85,11 @@ public class AppComponent implements SomeInterface {
         if (context != null) {
             someProperty = get(properties, "someProperty");
         }
-        log.info("Reconfigured");
+        log.info("Data Classification is Reconfigured");
     }
 
     @Override
     public void someMethod() {
         log.info("Invoked");
     }
-
 }
