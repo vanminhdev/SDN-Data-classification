@@ -28,6 +28,8 @@ import org.osgi.service.component.annotations.ReferenceCardinality;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import vn.edu.huce.dataclassification.utils.ApiClient;
+
 import java.util.Dictionary;
 import java.util.Properties;
 
@@ -54,17 +56,13 @@ public class AppComponent implements SomeInterface {
     protected ComponentConfigService cfgService;
     @Reference
     private PacketService packetService;
-
     private PacketProcessor packetProcessor = new MyPacketProcessor();
-    @Reference
-    private PacketProcessor natRoutingPacketProcessor;
 
     @Activate
     protected void activate() {
         cfgService.registerProperties(getClass());
         if (packetService != null) {
             packetService.addProcessor(packetProcessor, PacketProcessor.director(0));
-            packetService.addProcessor(natRoutingPacketProcessor, PacketProcessor.director(0));
         }
         log.info("Data Classification is Started");
     }
@@ -74,7 +72,6 @@ public class AppComponent implements SomeInterface {
         cfgService.unregisterProperties(getClass(), false);
         if (packetService != null) {
             packetService.removeProcessor(packetProcessor);
-            packetService.removeProcessor(natRoutingPacketProcessor);
         }
         log.info("Data Classification is Stopped");
     }

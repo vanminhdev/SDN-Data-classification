@@ -6,7 +6,7 @@
 - với lệnh ping sẽ truyền gói tin `icmp`
 - trong docker sẽ dùng network `bridge` là mặc định
 - các switch trong SDN phải hỗ trợ openflow
-- EtherType là gì?
+- EtherType trong header các gói tin
     - EtherType (Ethernet Type) là một trường trong tiêu đề Ethernet Frame (gói tin Ethernet) mà xác định kiểu dữ liệu hoặc giao thức mạng được đóng gói bên trong frame Ethernet. Trường EtherType giúp thiết bị mạng biết cách xử lý gói tin Ethernet và định dạng dữ liệu nó chứa
     - Các giá trị EtherType khác nhau xác định các loại dữ liệu khác nhau. Dưới đây là một số giá trị EtherType quan trọng:
         - `ARP` (Address Resolution Protocol): Giá trị EtherType cho gói tin ARP là 0x0806. ARP được sử dụng để ánh xạ địa chỉ IP sang địa chỉ MAC trong mạng.
@@ -41,7 +41,7 @@
 
         10. Data (Dữ liệu): Phần này chứa dữ liệu thực sự mà gói tin TCP đang chuyển tải, nếu có.
 3. Onos
-- vào ui qua đường dẫn: http://localhost:8183
+- vào ui qua đường dẫn: http://localhost:8181/onos/ui/
     - username: onos
     - pasword: rocks
 - xem version: `cat ~/onos/VERSION`
@@ -81,21 +81,29 @@
     - `OpenFlow Provider Suite` - `org.onosproject.openflow`: là một tập hợp các ứng dụng cung cấp khả năng hỗ trợ giao thức OpenFlow, một giao thức quản lý mạng SDN phổ biến. Nó cho phép ONOS tương tác với các thiết bị mạng (switches và routers) hỗ trợ OpenFlow để cấu hình và điều khiển chúng.
 - packet processor
     - thêm app implement interface `PacketProcessor`
+- giải thích các hàm:
+    - `payload.serialize()` https://javadoc.io/static/org.onosproject/onos-api/1.13.0/org/onlab/packet/IPv4.html#serialize-- : return a byte[] containing this packet and payloads
 4. mininet
 - xem version: `mn --version`
+- chạy thử mn: `mn --topo single,2 --controller=remote`
 - chạy thử kết nối đến onos: `mn --controller=remote,ip=192.168.0.2,port=6653 --switch=ovs,protocols=OpenFlow13`
     - sử dụng OpenFlow13 phù hợp với onos phiên bản latest
 - cấu hinh netplan
     - Trong phiên bản Ubuntu từ 17.10 trở đi mặc định Ubuntu đã chuyển từ sử dụng /etc/network/interfaces sang /etc/netplan/
 - kiểm tra host đã cho phép chuyển gói tin qua:
     - `cat /proc/sys/net/ipv4/ip_forward`: nếu trả về 1 là cho phép
-- h1 route add default gw 10.0.0.1
-- h1 route -n
-- s1 ifconfig s1-eth1 10.0.0.2 netmask 255.0.0.0
-- s1 ip route
-- ip route show
-- ip route add
-- ip route del
-- iptables -L -v
-- traceroute 8.8.8.8
-- iptables-save
+- cấu hình mạng
+    - chạy file setup mạng: 
+    ```sh
+    python3 /scripts/init_net.py
+    ```
+    - h1 route add default gw 10.0.0.1
+    - h1 route -n
+    - s1 ifconfig s1-eth1 10.0.0.2 netmask 255.0.0.0
+    - s1 ip route
+    - ip route show
+    - ip route add
+    - ip route del
+    - iptables -L -v
+    - traceroute 8.8.8.8
+    - iptables-save

@@ -6,6 +6,8 @@ RUN apt-get update && \
 
 RUN apt-get install -y xterm nano iptables
 
+RUN apt-get install -y tcpreplay
+
 # Install Mininet
 RUN pip3 install mininet
 

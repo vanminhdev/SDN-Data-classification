@@ -1,33 +1,34 @@
-#!/usr/bin/python
-
+from mininet.topo import Topo
 from mininet.net import Mininet
-from mininet.node import Controller, OVSSwitch, RemoteController, Node
+from mininet.node import RemoteController, Docker
 from mininet.cli import CLI
-from mininet.link import Intf
-from mininet.log import setLogLevel, info
 
+class MyTopology(Topo):
+  def build(self):
+    # Thêm switch
+    switch = self.addSwitch('s1')
 
-def myNetwork():
-  net = Mininet(topo=None, build=False)
+    # Thêm host
+    host = self.addHost('h1')
+    
+    # Kết nối host và switch
+    self.addLink(host, switch)
 
-  info('*** Adding controller\n')
-  net.addController(name='c0', controller=RemoteController, ip='192.168.0.2', port=6653)
+topo = MyTopology()
+net = Mininet(topo=topo, controller=RemoteController)
+net.start()
 
-  info('*** Add switches\n')
-  s1 = net.addSwitch('s1')
+# Cấu hình IP cho host
+host = net.get('h1')
+host.cmd('ifconfig h1-eth0 10.0.0.2 netmask 255.255.255.0')
 
-  info('*** Add hosts\n')
-  h1 = net.addHost('h1')
+# Cấu hình default gateway
+host.cmd('route add default gw 10.0.0.1')
 
-  info('*** Add links\n')
-  net.addLink(h1, s1)
+# Thiết lập NAT trên switch (cần cài đặt mininet có hỗ trợ NAT)
+switch = net.get('s1')
+switch.cmd('echo 1 > /proc/sys/net/ipv4/ip_forward')
+switch.cmd('iptables -t nat -A POSTROUTING -o eth0 -j MASQUERADE')
 
-  info('*** Starting network\n')
-  net.start()
-  CLI(net)
-  net.stop()
-
-
-if __name__ == '__main__':
-  setLogLevel('info')
-  myNetwork()
+CLI(net)
+net.stop()

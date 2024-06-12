@@ -96,9 +96,10 @@ switches["s4"].start([controllers["c1"]])
 net.addNAT().configDefault()
 
 #net.start() #start toan bo switch, k nen dung lenh nay
-
+#print(hosts['h1'].cmd('dhclient '+ hosts['h1'].defaultIntf().name))
+#print(hosts['h1'].cmd('apt update'))
 CLI(net)
-#net.stop()
+net.stop()
 # link s1 s2 down
 # link s1 s2 up
 # sudo -E python demo.py
