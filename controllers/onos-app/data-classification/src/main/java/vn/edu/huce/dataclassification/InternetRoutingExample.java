@@ -13,7 +13,7 @@ import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Reference;
 import org.osgi.service.component.annotations.ReferenceCardinality;
 
-@Component(immediate = true, service = {InternetRoutingExampleInterface.class})
+//@Component(immediate = true, service = {InternetRoutingExampleInterface.class})
 public class InternetRoutingExample implements InternetRoutingExampleInterface {
     @Reference
     private FlowRuleService flowRuleService;

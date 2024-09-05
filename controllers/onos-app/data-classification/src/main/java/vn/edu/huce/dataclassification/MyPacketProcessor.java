@@ -3,6 +3,7 @@ package vn.edu.huce.dataclassification;
 import java.nio.charset.StandardCharsets;
 
 import org.onlab.packet.*;
+import org.onlab.packet.TCP;
 import org.onosproject.net.ConnectPoint;
 import org.onosproject.net.DeviceId;
 import org.onosproject.net.HostId;
@@ -12,11 +13,12 @@ import org.onosproject.net.packet.PacketContext;
 import org.onosproject.net.packet.PacketProcessor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import vn.edu.huce.dataclassification.utils.ApiClient;
+// import vn.edu.huce.dataclassification.utils.ApiClient;
+import vn.edu.huce.dataclassification.utils.DateTimeUtil;
 
 public class MyPacketProcessor implements PacketProcessor {
     private final Logger log = LoggerFactory.getLogger(getClass());
-    private ApiClient apiClient = new ApiClient();
+    //private ApiClient apiClient = new ApiClient();
 
     public static final short FIN = 0b0000000000000001;
     public static final short SYN = 0b0000000000000010;
@@ -46,10 +48,12 @@ public class MyPacketProcessor implements PacketProcessor {
 
     @Override
     public void process(PacketContext context) {
+        log.info("MyPacketProcessor: process");
         // Xử lý gói tin ở đây
         // var parsed = context.inPacket().parsed();
         InboundPacket pkt = context.inPacket();
         Ethernet ethPacket = pkt.parsed();
+
         short etherType = ethPacket.getEtherType();
         short flags = 0;
 
@@ -69,6 +73,26 @@ public class MyPacketProcessor implements PacketProcessor {
 
             String sourceIpAddress = IPv4.fromIPv4Address(sourceAddress);
             String destinationIpAddress = IPv4.fromIPv4Address(destinationAddress);
+
+            //#1 Kích thước gói tin
+            int packetSize = ipv4Payload.getTotalLength();
+
+            //#2 Thời gian đến của gói tin
+            long arrivalTime = System.currentTimeMillis();
+
+            log.info("Received IPV4 packet from {} to {} with packetSize {}, arrivalTime = {}, flag = {}",
+                    sourceIpAddress, destinationIpAddress, packetSize, arrivalTime, ipv4Payload.getFlags());
+
+            // Kiểm tra xem gói tin có bị phân mảnh hay không
+            // boolean isFragmented = (ipv4Payload.getFlags() & 0x2000) != 0 || ipv4Payload.getFragmentOffset() != 0;
+
+            // if (isFragmented) {
+            //     // Xử lý gói tin bị phân mảnh
+            //     handleFragmentedPacket(ipv4Payload);
+            // } else {
+            //     // Xử lý gói tin không bị phân mảnh
+            //     handleCompletePacket(ipv4Payload);
+            // }
 
             // Kiểm tra giao thức Transport (TCP hoặc UDP)
             byte protocol = ipv4Payload.getProtocol();
@@ -126,12 +150,44 @@ public class MyPacketProcessor implements PacketProcessor {
                 // Kiểm tra cổng nguồn và cổng đích
                 int srcPort = payload.getSourcePort();
                 int dstPort = payload.getDestinationPort();
+                DateTimeUtil.GetCurrDateTime();
 
                 dataStr = encodeHexString(data);
                 handleData(sourceIpAddress, srcPort, destinationIpAddress, dstPort, data);
             }
-            log.info("Received IPV4 packet from {} to {} with protocol {}, data = {}, flag = {}",
-                    sourceIpAddress, destinationIpAddress, protocol, dataStr, flags);
+            log.info("Received IPV4 packet from {} to {} with protocol {}, data = {}",
+                    sourceIpAddress, destinationIpAddress, protocol, dataStr.length());
+        }
+    }
+
+    private void handleFragmentedPacket(IPv4 ipv4Payload) {
+        // Logic để xử lý gói tin bị phân mảnh
+        log.info("Received fragmented packet with ID: {}", ipv4Payload.getIdentification());
+    }
+
+    private void handleCompletePacket(IPv4 ipv4Payload) {
+        // Logic để xử lý gói tin không bị phân mảnh
+        int packetSize = ipv4Payload.getTotalLength();
+        long arrivalTime = System.currentTimeMillis();
+    
+        int sourceAddress = ipv4Payload.getSourceAddress();
+        int destinationAddress = ipv4Payload.getDestinationAddress();
+    
+        String sourceIpAddress = IPv4.fromIPv4Address(sourceAddress);
+        String destinationIpAddress = IPv4.fromIPv4Address(destinationAddress);
+    
+        byte protocol = ipv4Payload.getProtocol();
+        String dataStr = "";
+        if (protocol == IPv4.PROTOCOL_ICMP) {
+            ICMP payload = (ICMP) ipv4Payload.getPayload();
+        } else if (protocol == IPv4.PROTOCOL_TCP) {
+            TCP payload = (TCP) ipv4Payload.getPayload();
+            byte[] data = payload.serialize();
+    
+            int srcPort = payload.getSourcePort();
+            int dstPort = payload.getDestinationPort();
+    
+            dataStr = encodeHexString(data);
         }
     }
 
@@ -140,7 +196,7 @@ public class MyPacketProcessor implements PacketProcessor {
         if (data.length < MIN_BYTE_ARR_LENTH) {
             return;
         }
-        String dataStr = encodeHexString(data);
-        apiClient.sendData(sourceIpAddress, srcPort, destinationIpAddress, dstPort, dataStr);
+        //String dataStr = encodeHexString(data);
+        //apiClient.sendData(sourceIpAddress, srcPort, destinationIpAddress, dstPort, "");
     }
 }

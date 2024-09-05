@@ -28,7 +28,7 @@ import org.osgi.service.component.annotations.ReferenceCardinality;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import vn.edu.huce.dataclassification.utils.ApiClient;
+//import vn.edu.huce.dataclassification.utils.ApiClient;
 
 import java.util.Dictionary;
 import java.util.Properties;
