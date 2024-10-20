@@ -2,6 +2,7 @@ package vn.edu.huce.dataclassification;
 
 import java.nio.charset.StandardCharsets;
 
+import com.sun.xml.bind.v2.model.annotation.Quick;
 import org.onlab.packet.*;
 import org.onlab.packet.TCP;
 import org.onosproject.net.ConnectPoint;
@@ -48,7 +49,6 @@ public class MyPacketProcessor implements PacketProcessor {
 
     @Override
     public void process(PacketContext context) {
-        log.info("MyPacketProcessor: process");
         // Xử lý gói tin ở đây
         // var parsed = context.inPacket().parsed();
         InboundPacket pkt = context.inPacket();
@@ -57,14 +57,15 @@ public class MyPacketProcessor implements PacketProcessor {
         short etherType = ethPacket.getEtherType();
         short flags = 0;
 
+        MacAddress sourceMac = ethPacket.getSourceMAC(); // địa chỉ mac source
+        MacAddress destMac = ethPacket.getDestinationMAC(); // địa chỉ mac dest
+
         if (etherType == Ethernet.TYPE_LLDP) {
             ConnectPoint receivedFrom = pkt.receivedFrom();
             DeviceId deviceId = receivedFrom.deviceId();
             PortNumber portNumber = receivedFrom.port();
-            MacAddress sourceMac = ethPacket.getSourceMAC(); // địa chỉ mac source
-            MacAddress destMac = ethPacket.getDestinationMAC(); // địa chỉ mac dest
-            log.info("Received LLDP packet: From device = {}, from port = {}, source MAC = {}, destination MAC = {}",
-                    deviceId, portNumber, sourceMac, destMac);
+            // log.info("Received LLDP packet: From device = {}, from port = {}, source MAC = {}, destination MAC = {}",
+            //         deviceId, portNumber, sourceMac, destMac);
         } else if (etherType == Ethernet.TYPE_IPV4) {
             IPv4 ipv4Payload = (IPv4) ethPacket.getPayload();
 
