@@ -81,6 +81,7 @@
     - `OpenFlow Provider Suite` - `org.onosproject.openflow`: là một tập hợp các ứng dụng cung cấp khả năng hỗ trợ giao thức OpenFlow, một giao thức quản lý mạng SDN phổ biến. Nó cho phép ONOS tương tác với các thiết bị mạng (switches và routers) hỗ trợ OpenFlow để cấu hình và điều khiển chúng.
 - packet processor
     - thêm app implement interface `PacketProcessor`
+    - chỉ bắt các packet có length lớn hơn 100 để bỏ qua các packet thiết lập kết nối không cần thiết
 - giải thích các hàm:
     - `payload.serialize()` https://javadoc.io/static/org.onosproject/onos-api/1.13.0/org/onlab/packet/IPv4.html#serialize-- : return a byte[] containing this packet and payloads
 4. mininet
@@ -107,3 +108,12 @@
     - iptables -L -v
     - traceroute 8.8.8.8
     - iptables-save
+- giả lập http server cho một host
+    - chạy http server:
+    ```sh
+    h4 python3 -m http.server 8000 &
+    ```
+    - request thử:
+    ```
+    h1 curl http://10.0.0.4:8000
+    ```

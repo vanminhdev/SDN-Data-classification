@@ -1,38 +1,51 @@
 from flask import Flask, request, jsonify
-from collections import defaultdict
+import logging
 
 app = Flask(__name__)
 
-# Dictionary để lưu trữ các bản ghi theo (src_ip, dest_ip, src_port, dest_port)
-records = defaultdict(list)
+# Cấu hình logger
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
-# Hàm giả lập xử lý dữ liệu
-def process_data(src_ip, dest_ip, src_port, dest_port, data):
-    print(f"Processing data for {src_ip}:{src_port} -> {dest_ip}:{dest_port}: {data}")
-
+# Định nghĩa route POST để nhận dữ liệu từ Java
 @app.route('/api/push-data', methods=['POST'])
-def add_record():
-    # Lấy dữ liệu từ request
+def receive_data():
+    # Lấy dữ liệu JSON gửi từ Java
     data = request.get_json()
-    src_ip = data.get('src_ip')
-    dest_ip = data.get('dest_ip')
-    src_port = data.get('src_port')
-    dest_port = data.get('dest_port')
-    hex_data = data.get('hex_data')
 
-    if not src_ip or not dest_ip or not src_port or not dest_port or not hex_data:
-        return jsonify({"error": "Missing required fields"}), 400
+    # Kiểm tra dữ liệu có hợp lệ không
+    if not data:
+        return jsonify({"error": "No data provided"}), 400
+    
+    # Lấy từng giá trị từ dữ liệu gửi đến
+    try:
+        time_epoch = data.get('time_epoch')
+        tcp_src_port = data.get('tcp_src_port')
+        tcp_dst_port = data.get('tcp_dst_port')
+        udp_src_port = data.get('udp_src_port')
+        udp_dst_port = data.get('udp_dst_port')
+        frame_len = data.get('frame_len')
+        ip_proto = data.get('ip_proto')
 
-    # Thêm bản ghi vào danh sách tương ứng với (src_ip, dest_ip, src_port, dest_port)
-    records[(src_ip, dest_ip, src_port, dest_port)].append(hex_data)
+        # Xử lý dữ liệu (ví dụ, in ra hoặc lưu vào cơ sở dữ liệu)
+        input = {
+            "time_epoch": time_epoch,
+            "tcp_src_port": tcp_src_port,
+            "tcp_dst_port": tcp_dst_port,
+            "udp_src_port": udp_src_port,
+            "udp_dst_port": udp_dst_port,
+            "frame_len": frame_len,
+            "ip_proto": ip_proto
+        }
 
-    # Kiểm tra nếu có đủ 20 bản ghi, thì gọi hàm xử lý
-    if len(records[(src_ip, dest_ip, src_port, dest_port)]) == 20:
-        process_data(src_ip, dest_ip, src_port, dest_port, records[(src_ip, dest_ip, src_port, dest_port)])
-        # Xóa các bản ghi đã xử lý
-        del records[(src_ip, dest_ip, src_port, dest_port)]
+        # Log dữ liệu nhận được
+        logger.info(f"Received data: {input}")
 
-    return jsonify({"message": "Record added successfully"}), 201
+        return "Ok", 200
+
+    except KeyError as e:
+        return jsonify({"error": f"Missing field: {e}"}), 400
+
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000, debug=True)
+    app.run(debug=True, host='0.0.0.0', port=5000)

@@ -6,6 +6,7 @@ import com.mashape.unirest.http.Unirest;
 import com.mashape.unirest.http.exceptions.UnirestException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import vn.edu.huce.dataclassification.dtos.data.DataFlowDto;
 
 import java.io.IOException;
 import java.util.HashMap;
@@ -16,15 +17,17 @@ public class ApiClient {
 
     private final Logger log = LoggerFactory.getLogger(getClass());
 
-    public void sendData(String srcIp, int srcPort, String destIp, int destPort, String hexData) {
+    public void sendData(DataFlowDto input) {
         try {
             // Dữ liệu JSON
             Map<String, Object> data = new HashMap<>();
-            data.put("src_ip", srcIp);
-            data.put("dest_ip", destIp);
-            data.put("src_port", srcPort);
-            data.put("dest_port", destPort);
-            data.put("hex_data", hexData);
+            data.put("time_epoch", input.getTimeEpoch());
+            data.put("tcp_src_port", input.getTcpSrcPort());
+            data.put("tcp_dst_port", input.getTcpDstPort());
+            data.put("udp_src_port", input.getUdpSrcPort());
+            data.put("udp_dst_port", input.getUdpDstPort());
+            data.put("frame_len", input.getFrameLen());
+            data.put("ip_proto", input.getIpProto());
 
             // Chuyển đổi map thành JSON
             ObjectMapper objectMapper = new ObjectMapper();
@@ -35,7 +38,6 @@ public class ApiClient {
                     .header("Content-Type", "application/json")
                     .body(json)
                     .asString();
-
             log.info("call api send data: response = {}", response.getBody());
         } catch (UnirestException | IOException e) {
             log.error("call api send data: {}", e.getMessage());
