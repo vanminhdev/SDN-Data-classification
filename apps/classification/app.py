@@ -27,7 +27,7 @@ def receive_data():
         frame_len = data.get('frame_len')
         ip_proto = data.get('ip_proto')
 
-        # Xử lý dữ liệu (ví dụ, in ra hoặc lưu vào cơ sở dữ liệu)
+        # Xử lý dữ liệu
         input = {
             "time_epoch": time_epoch,
             "tcp_src_port": tcp_src_port,
