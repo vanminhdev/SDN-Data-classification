@@ -18,6 +18,7 @@ services:
       - $PWD/mininet/scripts:/scripts
       - $PWD/mininet/kernel/modules:/lib/modules
       - $PWD/mininet/pcaps:/pcaps
+      - $PWD/mininet/mkdata:/mkdata
     command: >
       bash -c '
         touch /etc/network/interfaces;
