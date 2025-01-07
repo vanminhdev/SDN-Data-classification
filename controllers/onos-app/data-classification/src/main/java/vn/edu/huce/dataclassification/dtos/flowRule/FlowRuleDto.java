@@ -1,5 +1,8 @@
 package vn.edu.huce.dataclassification.dtos.flowRule;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 public class FlowRuleDto {
     private String deviceId;
     private String ipSrc;
@@ -9,8 +12,19 @@ public class FlowRuleDto {
     private int udpPortSrc;
     private int udpPortDst;
 
-    public FlowRuleDto(String deviceId, String ipSrc, String ipDst, int tcpPortSrc, int tcpPortDst,
-            int udpPortSrc, int udpPortDst) {
+    public FlowRuleDto() {
+    }
+
+    @JsonCreator
+    public FlowRuleDto(
+        @JsonProperty("deviceId") String deviceId,
+        @JsonProperty("ipSrc") String ipSrc,
+        @JsonProperty("ipDst") String ipDst,
+        @JsonProperty("tcpPortSrc") int tcpPortSrc,
+        @JsonProperty("tcpPortDst") int tcpPortDst,
+        @JsonProperty("udpPortSrc") int udpPortSrc,
+        @JsonProperty("udpPortDst") int udpPortDst
+    ) {
         this.deviceId = deviceId;
         this.ipSrc = ipSrc;
         this.ipDst = ipDst;
@@ -32,10 +46,6 @@ public class FlowRuleDto {
     }
 
     public void setDeviceId(String deviceId) {
-        this.deviceId = deviceId;
-    }
-
-    public FlowRuleDto(String deviceId) {
         this.deviceId = deviceId;
     }
 

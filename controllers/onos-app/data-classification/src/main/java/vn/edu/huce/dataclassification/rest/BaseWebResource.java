@@ -13,7 +13,7 @@ public class BaseWebResource extends AbstractWebResource {
         return Response.ok(jsonObject.toString()).build();
     }
 
-    protected Response okResponse(Object object) {
+    protected Response  okResponse(Object object) {
         String jsonResponse = null;
         try {
             jsonResponse = this.mapper().writeValueAsString(object);
@@ -25,5 +25,9 @@ public class BaseWebResource extends AbstractWebResource {
 
     protected Response okResponse() {
         return Response.ok().build();
+    }
+
+    protected Response badRequestResponse(String string) {
+        return Response.status(400, string).build();
     }
 }

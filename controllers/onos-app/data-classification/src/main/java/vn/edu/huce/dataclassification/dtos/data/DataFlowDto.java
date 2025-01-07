@@ -77,6 +77,9 @@ public class DataFlowDto {
         this.ipProto = ipProto;
     }
 
+    public DataFlowDto() {
+    }
+
     public DataFlowDto(long timeEpoch, int tcpSrcPort, int tcpDstPort,
                        int udpSrcPort, int udpDstPort, long frameLen, int ipProto, String deviceId) {
         this.timeEpoch = timeEpoch;
