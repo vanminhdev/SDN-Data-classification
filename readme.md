@@ -49,7 +49,7 @@
 - vào ui qua đường dẫn: <http://localhost:8181/onos/ui/>
   - username: onos
   - pasword: rocks
-- xem version: `cat ~/onos/VERSION`
+- xem version: `cat ~/onos/VERSION`: `2.7.1`
 - tạo project:
   - clone project onos: `https://github.com/opennetworkinglab/onos.git`
   - chạy lệnh: `bash "<đường dẫn tới project onos>/tools/dev/bin/onos-create-app"`
@@ -89,6 +89,49 @@
   - chỉ bắt các packet có length lớn hơn 100 để bỏ qua các packet thiết lập kết nối không cần thiết
 - giải thích các hàm:
   - `payload.serialize()` <https://javadoc.io/static/org.onosproject/onos-api/1.13.0/org/onlab/packet/IPv4.html#serialize--> : return a byte[] containing this packet and payloads
+- cấu hình webapi lần đầu
+  - cấu hình `properties` trong file `pom.xml`
+
+    ```xml
+    <properties>
+      ...
+      <web.context>/onos/v1/dataclassification</web.context>
+      <api.version>1.0.0</api.version>
+      <api.title>Data Classification REST API</api.title>
+      <api.description>APIs for data classification.</api.description>
+      <api.package>vn.edu.huce.dataclassification.rest</api.package>
+    <properties/>
+    ```
+
+  - cấu hình `instruction` trong file `pom.xml`
+
+    ```xml
+    <build>
+      <plugins>
+        ...
+        <plugin>
+          <groupId>org.apache.felix</groupId>
+          <artifactId>maven-bundle-plugin</artifactId>
+          <extensions>true</extensions>
+          <configuration>
+              <instructions>
+                  <Bundle-SymbolicName>${project.artifactId}</Bundle-SymbolicName>
+                  <_wab>src/main/webapp/</_wab>
+                  <Include-Resource>WEB-INF/classes/apidoc/swagger.json=target/swagger.json,
+                      {maven-resources}</Include-Resource>
+                  <Web-ContextPath>${web.context}</Web-ContextPath>
+              ...
+              <instructions/>
+          ...
+          <configuration/>
+        <plugin/>
+      <plugins/>
+    <build/>
+    ```
+
+  - Thêm file `web.xml` trong `src/webapp/WEB-INF/`
+  - Viết các class api kế thừa `AbstractWebResource`
+
 - Một số application:
   - Forwarding mặc định (Reactive Forwarding) `org.onosproject.fwd`
     - Chức năng:
