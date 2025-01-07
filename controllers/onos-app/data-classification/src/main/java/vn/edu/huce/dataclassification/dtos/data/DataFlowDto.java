@@ -1,7 +1,5 @@
 package vn.edu.huce.dataclassification.dtos.data;
 
-import java.util.Date;
-
 /**
  * Dữ liệu thu thập
  */
@@ -13,6 +11,15 @@ public class DataFlowDto {
     private int udpDstPort;
     private long frameLen;
     private int ipProto;
+    private String deviceId;
+
+    public String getDeviceId() {
+        return deviceId;
+    }
+
+    public void setDeviceId(String deviceId) {
+        this.deviceId = deviceId;
+    }
 
     public long getTimeEpoch() {
         return timeEpoch;
@@ -71,7 +78,7 @@ public class DataFlowDto {
     }
 
     public DataFlowDto(long timeEpoch, int tcpSrcPort, int tcpDstPort,
-                       int udpSrcPort, int udpDstPort, long frameLen, int ipProto) {
+                       int udpSrcPort, int udpDstPort, long frameLen, int ipProto, String deviceId) {
         this.timeEpoch = timeEpoch;
         this.tcpSrcPort = tcpSrcPort;
         this.tcpDstPort = tcpDstPort;
@@ -79,5 +86,6 @@ public class DataFlowDto {
         this.udpDstPort = udpDstPort;
         this.frameLen = frameLen;
         this.ipProto = ipProto;
+        this.deviceId = deviceId;
     }
 }

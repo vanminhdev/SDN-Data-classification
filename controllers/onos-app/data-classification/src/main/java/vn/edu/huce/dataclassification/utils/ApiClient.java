@@ -28,6 +28,7 @@ public class ApiClient {
             data.put("udp_dst_port", input.getUdpDstPort());
             data.put("frame_len", input.getFrameLen());
             data.put("ip_proto", input.getIpProto());
+            data.put("device_id", input.getDeviceId());
 
             // Chuyển đổi map thành JSON
             ObjectMapper objectMapper = new ObjectMapper();

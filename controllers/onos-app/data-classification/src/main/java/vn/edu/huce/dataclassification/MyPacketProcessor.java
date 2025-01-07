@@ -5,6 +5,7 @@ import org.onlab.packet.TCP;
 import org.onosproject.net.ConnectPoint;
 import org.onosproject.net.DeviceId;
 import org.onosproject.net.PortNumber;
+import org.onosproject.net.behaviour.QosConfigBehaviour;
 import org.onosproject.net.packet.InboundPacket;
 import org.onosproject.net.packet.PacketContext;
 import org.onosproject.net.packet.PacketProcessor;
@@ -99,8 +100,9 @@ public class MyPacketProcessor implements PacketProcessor {
                     packetSize, epochSeconds, ipv4Payload.getFlags(), protocol, body.length());
 
             var data = new DataFlowDto(timestamp, tcpSrcPort, tcpDstPort, udpSrcPort, udpDstPort,
-                    packetSize, protocol);
+                    packetSize, protocol, deviceId.toString());
             apiClient.sendData(data);
+
         }
     }
 }
