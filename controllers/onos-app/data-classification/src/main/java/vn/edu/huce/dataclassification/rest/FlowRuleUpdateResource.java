@@ -17,7 +17,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 
 import io.atomix.primitive.operation.Operation;
 import vn.edu.huce.dataclassification.ApplyFlowRule;
-import vn.edu.huce.dataclassification.dtos.flowRule.FlowRuleDto;
+import vn.edu.huce.dataclassification.dtos.flowRule.CreateFlowRuleDto;
 
 @Path("flowruleupdate")
 public class FlowRuleUpdateResource extends BaseWebResource {
@@ -43,9 +43,9 @@ public class FlowRuleUpdateResource extends BaseWebResource {
     @Produces(MediaType.APPLICATION_JSON)
     public Response update(String data) {
         var applyFlowRuleService = get(ApplyFlowRule.class);
-        FlowRuleDto input;
+        CreateFlowRuleDto input;
         try {
-            input = this.mapper().readValue(data, FlowRuleDto.class);
+            input = this.mapper().readValue(data, CreateFlowRuleDto.class);
         } catch (JsonProcessingException e) {
             return badRequestResponse(e.getMessage());
         }

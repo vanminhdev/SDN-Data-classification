@@ -1,7 +1,6 @@
 package vn.edu.huce.dataclassification;
 
 import org.onlab.packet.*;
-import org.onlab.packet.TCP;
 import org.onosproject.net.ConnectPoint;
 import org.onosproject.net.DeviceId;
 import org.onosproject.net.PortNumber;
@@ -86,6 +85,8 @@ public class MyPacketProcessor implements PacketProcessor {
                 tcpSrcPort = payload.getSourcePort();
                 tcpDstPort = payload.getDestinationPort();
                 //body = new String(payload.serialize(), StandardCharsets.UTF_8);
+
+                long seqNumber = payload.getSequence();
             } else if (protocol == IPv4.PROTOCOL_UDP) {
                 UDP payload = (UDP) ipv4Payload.getPayload();
 

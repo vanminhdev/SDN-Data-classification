@@ -3,7 +3,7 @@ package vn.edu.huce.dataclassification.dtos.flowRule;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
-public class FlowRuleDto {
+public class CreateFlowRuleDto {
     private String deviceId;
     private String ipSrc;
     private String ipDst;
@@ -12,11 +12,11 @@ public class FlowRuleDto {
     private int udpPortSrc;
     private int udpPortDst;
 
-    public FlowRuleDto() {
+    public CreateFlowRuleDto() {
     }
 
     @JsonCreator
-    public FlowRuleDto(
+    public CreateFlowRuleDto(
         @JsonProperty("deviceId") String deviceId,
         @JsonProperty("ipSrc") String ipSrc,
         @JsonProperty("ipDst") String ipDst,
