@@ -1,10 +1,12 @@
-1. Chạy project
+# SDN Data Classification
+
+## 1. Chạy project
 
 ```bash
     ./run.sh
 ```
 
-2. Kiến thức về mạng
+## 2. Kiến thức về mạng
 
 - với lệnh ping sẽ truyền gói tin `icmp`
 - trong docker sẽ dùng network `bridge` là mặc định
@@ -24,27 +26,28 @@
     - `PPPOED` (PPPoE Discovery Stage): Giá trị EtherType cho PPPoE Discovery Stage là 0x8863. PPPoE (Point-to-Point Protocol over Ethernet) là một giao thức được sử dụng trong mạng Internet để thiết lập và quản lý kết nối điểm-điểm trên giao diện Ethernet. Trong quá trình khởi động kết nối PPPoE, gói tin PPPoE Discovery Stage có EtherType này được sử dụng để tìm kiếm và định danh máy chủ PPPoE
 - Một gói tin `TCP` có gì
   - Một gói tin TCP (Transmission Control Protocol) bao gồm nhiều trường thông tin trong header và có thể chứa dữ liệu. Dưới đây là các thông tin chính trong một gói tin TCP:
-        1. Port Numbers (Cổng nguồn và cổng đích): Cổng nguồn và cổng đích xác định ứng dụng nguồn và đích mà gói tin TCP đang gửi đến hoặc nhận từ. Cổng nguồn và cổng đích là các số 16-bit.
 
-        2. Sequence Number (Số thứ tự): Xác định số thứ tự của gói tin trong chuỗi. Điều này giúp xác định thứ tự của các gói tin và đảm bảo chúng đến đúng thứ tự.
+    1. Port Numbers (Cổng nguồn và cổng đích): Cổng nguồn và cổng đích xác định ứng dụng nguồn và đích mà gói tin TCP đang gửi đến hoặc nhận từ. Cổng nguồn và cổng đích là các số 16-bit.
 
-        3. Acknowledgment Number (Số xác nhận): Số này được sử dụng để xác định gói tin mà máy chủ hoặc máy khách muốn xác nhận là đã nhận được. Nó thường được sử dụng trong quá trình xác định trạng thái kết nối.
+    2. Sequence Number (Số thứ tự): Xác định số thứ tự của gói tin trong chuỗi. Điều này giúp xác định thứ tự của các gói tin và đảm bảo chúng đến đúng thứ tự.
 
-        4. Data Offset (Header Length): Trường này xác định độ dài của header TCP, được biểu diễn dưới dạng số từ 4-byte words.
+    3. Acknowledgment Number (Số xác nhận): Số này được sử dụng để xác định gói tin mà máy chủ hoặc máy khách muốn xác nhận là đã nhận được. Nó thường được sử dụng trong quá trình xác định trạng thái kết nối.
 
-        5. Flags (Cờ điều khiển): Các cờ điều khiển (bit flags) bao gồm các thông tin về trạng thái và điều khiển của gói tin TCP. Ví dụ, các cờ bao gồm cờ SYN (synchronization), cờ ACK (acknowledgment), cờ FIN (finish), và nhiều cờ khác.
+    4. Data Offset (Header Length): Trường này xác định độ dài của header TCP, được biểu diễn dưới dạng số từ 4-byte words.
 
-        6. Window Size (Cửa sổ cơ hội): Xác định kích thước cửa sổ mà bên nhận có sẵn để nhận gói tin. Nó liên quan đến cách kiểm soát luồng và tránh quá tải mạng.
+    5. Flags (Cờ điều khiển): Các cờ điều khiển (bit flags) bao gồm các thông tin về trạng thái và điều khiển của gói tin TCP. Ví dụ, các cờ bao gồm cờ SYN (synchronization), cờ ACK (acknowledgment), cờ FIN (finish), và nhiều cờ khác.
 
-        7. Checksum (Kiểm tra tổng): Được sử dụng để kiểm tra tính toàn vẹn của gói tin và header. Nó giúp xác định xem gói tin có bị biến đổi trong quá trình truyền tải không.
+    6. Window Size (Cửa sổ cơ hội): Xác định kích thước cửa sổ mà bên nhận có sẵn để nhận gói tin. Nó liên quan đến cách kiểm soát luồng và tránh quá tải mạng.
 
-        8. Urgent Pointer (Trỏ đến phần ưu tiên): Trường này thường sử dụng khi cờ URG (urgent) được đặt, và nó xác định vị trí của dữ liệu ưu tiên trong gói tin.
+    7. Checksum (Kiểm tra tổng): Được sử dụng để kiểm tra tính toàn vẹn của gói tin và header. Nó giúp xác định xem gói tin có bị biến đổi trong quá trình truyền tải không.
 
-        9. Options (Tùy chọn): Có thể bao gồm các tùy chọn bổ sung như Maximum Segment Size (MSS), Timestamps, Selective Acknowledgment (SACK), và nhiều tùy chọn khác.
+    8. Urgent Pointer (Trỏ đến phần ưu tiên): Trường này thường sử dụng khi cờ URG (urgent) được đặt, và nó xác định vị trí của dữ liệu ưu tiên trong gói tin.
 
-        10. Data (Dữ liệu): Phần này chứa dữ liệu thực sự mà gói tin TCP đang chuyển tải, nếu có.
+    9. Options (Tùy chọn): Có thể bao gồm các tùy chọn bổ sung như Maximum Segment Size (MSS), Timestamps, Selective Acknowledgment (SACK), và nhiều tùy chọn khác.
 
-3. Onos
+    10. Data (Dữ liệu): Phần này chứa dữ liệu thực sự mà gói tin TCP đang chuyển tải, nếu có.
+
+## 3. Onos
 
 - vào ui qua đường dẫn: <http://localhost:8181/onos/ui/>
   - username: onos
@@ -149,7 +152,7 @@
         Bằng cách xử lý các gói tin Packet-In, có thể lấy thông tin về các switch mà gói tin đã đi qua. từ đây có thể áp dụng QoS cho các switch nó đi qua hoặc điều chỉnh flow rule để đi qua các switch khác
   - ONOS hỗ trợ QoS thông qua việc sử dụng `Meter` hoặc `Queue` trên switch
 
-4. mininet
+## 4. mininet
 
 - xem version: `mn --version`
 - chạy thử mn: `mn --topo single,2 --controller=remote`
