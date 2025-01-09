@@ -239,7 +239,12 @@
 
     ovs-ofctl -O OpenFlow13 dump-meters s1
     ```
-  
+
+  - Cấu hình meter:
+    - Chỉ hỗ trợ các unit KB_PER_SEC (Kilo bit / s), PKTS_PER_SEC (packet / s) không hỗ trợ BYTES_PER_SEC (byte / s)
+    - Band chỉ hỗ trợ DROP (giảm gói), REMARK (đánh dấu lại DSCP).
+    - meter sẽ được áp dụng vào thông qua cấu hình flow
+
   - Đo băng thông
 
     ```sh
@@ -247,4 +252,3 @@
 
     h1 iperf -c h3 -u -n 100B
     ```
-  
