@@ -228,3 +228,20 @@
     ovs-vsctl list qos s1-eth1
     ovs-vsctl list queue s1-eth1
     ```
+
+  - Xem meters
+
+    ```sh
+    ovs-vsctl list-br
+
+    ovs-ofctl -O OpenFlow13 dump-meters s1
+    ```
+  
+  - Đo băng thông
+
+    ```sh
+    h3 iperf -s &
+
+    h1 iperf -c h3 -u -n 100B
+    ```
+  
