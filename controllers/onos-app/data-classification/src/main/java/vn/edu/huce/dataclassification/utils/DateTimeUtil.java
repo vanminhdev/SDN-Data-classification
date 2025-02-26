@@ -19,12 +19,12 @@ public class DateTimeUtil {
     /**
     * Lấy thời gian ở định dạng Unix Epoch chính xác đến nano giây
     */
-    public static double getEpochSecond() {
+    public static long getEpochNano() {
         Instant now = Instant.now();
         long epochSeconds = now.getEpochSecond();
         int nanoAdjustment = now.getNano();
 
-        // Kết hợp thành giá trị thập phân
-        return (double) epochSeconds + (nanoAdjustment / 1_000_000_000.0);
+        // Chuyển đổi giây và nano giây thành tổng số nano giây từ Epoch
+        return epochSeconds * 1_000_000_000L + nanoAdjustment;
     }
 }

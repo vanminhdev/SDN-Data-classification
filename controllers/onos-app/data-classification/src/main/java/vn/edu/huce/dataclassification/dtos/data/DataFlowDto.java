@@ -12,6 +12,24 @@ public class DataFlowDto {
     private long frameLen;
     private int ipProto;
     private String deviceId;
+    private String srcIp;
+    private String dstIp;
+
+    public String getSrcIp() {
+        return srcIp;
+    }
+
+    public void setSrcIp(String srcIp) {
+        this.srcIp = srcIp;
+    }
+
+    public String getDstIp() {
+        return dstIp;
+    }
+
+    public void setDstIp(String dstIp) {
+        this.dstIp = dstIp;
+    }
 
     public String getDeviceId() {
         return deviceId;
@@ -81,7 +99,8 @@ public class DataFlowDto {
     }
 
     public DataFlowDto(long timeEpoch, int tcpSrcPort, int tcpDstPort,
-                       int udpSrcPort, int udpDstPort, long frameLen, int ipProto, String deviceId) {
+                       int udpSrcPort, int udpDstPort, long frameLen, int ipProto, String deviceId,
+                       String srcIp, String dstIp) {
         this.timeEpoch = timeEpoch;
         this.tcpSrcPort = tcpSrcPort;
         this.tcpDstPort = tcpDstPort;
@@ -90,5 +109,7 @@ public class DataFlowDto {
         this.frameLen = frameLen;
         this.ipProto = ipProto;
         this.deviceId = deviceId;
+        this.srcIp = srcIp;
+        this.dstIp = dstIp;
     }
 }

@@ -45,7 +45,9 @@ public class MyPacketProcessor implements PacketProcessor {
         ConnectPoint receivedFrom = pkt.receivedFrom();
         DeviceId deviceId = receivedFrom.deviceId();
         PortNumber portNumber = receivedFrom.port();
-        long timestamp = context.time();
+        //long timestamp = context.time();
+        // Thời gian nhận gói tin
+        long timestamp = DateTimeUtil.getEpochNano();
 
         if (etherType == Ethernet.TYPE_LLDP) {
             // log.info("Received LLDP packet: From device = {}, from port = {}, source MAC
@@ -60,11 +62,8 @@ public class MyPacketProcessor implements PacketProcessor {
             String sourceIpAddress = IPv4.fromIPv4Address(sourceAddress);
             String destinationIpAddress = IPv4.fromIPv4Address(destinationAddress);
 
-            // #1 Kích thước gói tin
+            // Kích thước gói tin
             int packetSize = ipv4Payload.getTotalLength();
-
-            // #2 Thời gian đến của gói tin
-            double epochSeconds = DateTimeUtil.getEpochSecond();
 
             String body = new String(ipv4Payload.serialize(), StandardCharsets.UTF_8);
 
@@ -96,12 +95,12 @@ public class MyPacketProcessor implements PacketProcessor {
             }
 
             log.info("timestamp {}, deviceId {}, portNumber {}: Received IPV4 packet from {} to {}" +
-                            " with packetSize {}, epochSeconds = {}, flag = {}, protocol = {}, body = {}",
+                            " with packetSize {}, flag = {}, protocol = {}, body = {}",
                     timestamp, deviceId, portNumber, sourceIpAddress, destinationIpAddress,
-                    packetSize, epochSeconds, ipv4Payload.getFlags(), protocol, body.length());
+                    packetSize, ipv4Payload.getFlags(), protocol, body.length());
 
             var data = new DataFlowDto(timestamp, tcpSrcPort, tcpDstPort, udpSrcPort, udpDstPort,
-                    packetSize, protocol, deviceId.toString());
+                    packetSize, protocol, deviceId.toString(), sourceIpAddress, destinationIpAddress);
             apiClient.sendData(data);
 
         }

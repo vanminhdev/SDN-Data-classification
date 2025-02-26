@@ -78,10 +78,25 @@ services:
       dockerfile: Dockerfile
     ports:
       - 5007:5000
+    environment:
+      - INFLUXDB_ADMIN_TOKEN=Oj5-XrZQ24Glkaz7ApaVqAXKGrX61oi3T28wcT2o5BkBWemzUyJnyUNoxYv_KghZXpcXxFmz4RZSnwjDUYQoyA==
     networks:
       sdn_network:
         ipv4_address: 192.168.0.4
 
+  influxdb:
+    image: influxdb:2.7
+    container_name: influxdb
+    ports:
+      - 8086:8086
+    volumes:
+      - influxdb_data:/var/lib/influxdb2
+    networks:
+      sdn_network:
+        ipv4_address: 192.168.0.5
+
+volumes:
+  influxdb_data:
 networks:
   sdn_network:
     driver: bridge

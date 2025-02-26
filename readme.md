@@ -252,3 +252,68 @@
 
     h1 iperf -c h3 -u -n 100B
     ```
+
+## 5. influxdb
+
+- Vào ui
+  <http://localhost:8086>
+  - tài khoản: admin/12345678
+
+### Giới thiệu chung
+
+InfluxDB là một cơ sở dữ liệu time series (dữ liệu chuỗi thời gian) mã nguồn mở, được thiết kế để xử lý khối lượng lớn dữ liệu time series với hiệu suất cao. InfluxDB đặc biệt phù hợp cho các ứng dụng giám sát, phân tích dữ liệu IoT, phân tích hiệu suất ứng dụng và các tình huống cần lưu trữ dữ liệu theo thời gian.
+
+### Các khái niệm quan trọng
+
+1. **Time Series Data**:
+    - Dữ liệu được lập chỉ mục theo thời gian
+    - Mỗi điểm dữ liệu bao gồm: timestamp, giá trị đo lường, và các thẻ đánh dấu
+
+2. **Database**: Là container chứa dữ liệu, có thể chứa nhiều measurements
+
+3. **Measurement**:
+    - Tương tự như bảng trong cơ sở dữ liệu quan hệ
+    - Lưu trữ dữ liệu liên quan đến một đối tượng cụ thể (VD: thông số mạng, hiệu suất hệ thống)
+
+4. **Tags**:
+    - Cặp key-value lưu trữ metadata
+    - Được lập chỉ mục - tối ưu cho việc truy vấn
+    - Dùng cho việc lọc và nhóm dữ liệu
+    - VD: location=datacenter1, device_id=sw1
+
+5. **Fields**:
+    - Cặp key-value lưu trữ giá trị thực tế của dữ liệu
+    - Không được lập chỉ mục
+    - VD: bandwidth=100, latency=5ms
+
+6. **Point**: Một bản ghi dữ liệu, bao gồm timestamp, tags và fields
+
+7. **Retention Policy**:
+    - Quy định thời gian lưu trữ dữ liệu
+    - Giúp quản lý vòng đời dữ liệu và tối ưu hóa lưu trữ
+
+8. **Continuous Queries**: Truy vấn tự động chạy định kỳ, thường dùng để tổng hợp dữ liệu
+
+### Ngôn ngữ truy vấn
+
+1. **InfluxQL**: Ngôn ngữ truy vấn tương tự SQL
+
+  ```SQL
+  SELECT bandwidth FROM network_stats WHERE device_id='sw1' AND time > now() - 1h
+  ```
+
+2. **Flux**: Ngôn ngữ truy vấn và xử lý dữ liệu mới hơn
+
+  ```SQL
+  from(bucket:"network")
+    |> range(start: -1h)
+    |> filter(fn: (r) => r._measurement == "network_stats" and r.device_id == "sw1")
+  ```
+
+### Ưu điểm của InfluxDB trong môi trường SDN
+
+- Hiệu suất cao khi xử lý dữ liệu time series
+- Khả năng xử lý hàng triệu điểm dữ liệu mỗi giây
+- Hỗ trợ tốt cho các tác vụ giám sát mạng thời gian thực
+- Dễ dàng tích hợp với các công cụ hiển thị như Grafana
+- Có cơ chế downsampling để lưu trữ hiệu quả dữ liệu lịch sử lâu dài
