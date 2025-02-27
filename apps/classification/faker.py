@@ -1,3 +1,17 @@
+"""
+Trình tạo dữ liệu lưu lượng mạng giả lập cho hệ thống phân loại
+File này được tạo chỉ để mục đích giả lập (fake) dữ liệu nhằm kiểm tra hệ thống phân loại 
+lưu lượng mạng. Các dữ liệu được tạo ra ở đây không phải là lưu lượng thực tế mà chỉ 
+là dữ liệu có cấu trúc tương tự để thử nghiệm chức năng phân loại hoạt động chính xác.
+Script này tạo hai loại lưu lượng giả lập:
+1. Lưu lượng video: Đặc trưng bởi các gói tin lớn hơn, thường sử dụng TCP
+2. Lưu lượng VoIP: Đặc trưng bởi các gói tin nhỏ hơn, thường sử dụng UDP
+Dữ liệu được tạo ra sẽ được lưu vào cơ sở dữ liệu InfluxDB để hệ thống phân loại 
+có thể đọc và xử lý. Các tham số như độ lớn gói tin, khoảng thời gian giữa các gói,
+v.v. được điều chỉnh để mô phỏng tương đối chính xác đặc điểm của các loại lưu lượng.
+Lưu ý: File này KHÔNG PHẢI là phần chính của hệ thống, chỉ được sử dụng trong quá trình
+phát triển và kiểm thử để tạo dữ liệu thử nghiệm.
+"""
 import os
 import time
 import random

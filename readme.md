@@ -46,6 +46,18 @@
     9. Options (Tùy chọn): Có thể bao gồm các tùy chọn bổ sung như Maximum Segment Size (MSS), Timestamps, Selective Acknowledgment (SACK), và nhiều tùy chọn khác.
 
     10. Data (Dữ liệu): Phần này chứa dữ liệu thực sự mà gói tin TCP đang chuyển tải, nếu có.
+- Địa chỉ IPv4:
+  - Một địa chỉ IPv4 gồm 32 bit, thường được hiển thị dưới dạng 4 octet (8 bit mỗi octet), ví dụ: 192.168.1.5
+  
+  - Subnet Mask và Prefix:
+    - Prefix (tiền tố) là cách viết tắt của subnet mask, cho biết bao nhiêu bit từ trái sang phải được sử dụng để xác định mạng
+    - Prefix /32 nghĩa là tất cả 32 bit đều được sử dụng để xác định mạng
+  
+  - Ý nghĩa của các giá trị prefix thông dụng:
+    - `/24` = `255.255.255.0` = 24 bit đầu tiên xác định mạng, 8 bit còn lại xác định host
+    - `/16` = `255.255.0.0` = 16 bit đầu tiên xác định mạng, 16 bit còn lại xác định host
+    - `/8` = `255.0.0.0` = 8 bit đầu tiên xác định mạng, 24 bit còn lại xác định host
+    - `/32` = `255.255.255.255` = tất cả 32 bit xác định mạng, 0 bit xác định host
 
 ## 3. Onos
 

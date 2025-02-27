@@ -2,8 +2,12 @@ package vn.edu.huce.dataclassification;
 
 import org.onlab.packet.IpPrefix;
 import org.onlab.packet.TpPort;
-import org.onlab.packet.EthType.EtherType;
+
+import java.util.ArrayList;
+import java.util.List;
+
 import org.onlab.packet.Ethernet;
+import org.onlab.packet.IpAddress;
 import org.onosproject.app.ApplicationService;
 import org.onosproject.core.ApplicationId;
 import org.onosproject.core.CoreService;
@@ -11,6 +15,7 @@ import org.onosproject.net.DeviceId;
 import org.onosproject.net.flow.DefaultFlowRule;
 import org.onosproject.net.flow.DefaultTrafficSelector;
 import org.onosproject.net.flow.DefaultTrafficTreatment;
+import org.onosproject.net.flow.FlowEntry;
 import org.onosproject.net.flow.FlowRule;
 import org.onosproject.net.flow.FlowRuleService;
 import org.onosproject.net.flow.TrafficSelector;
@@ -66,10 +71,11 @@ public class ApplyFlowRule {
 
         // Nếu có IP thì match IP
         if (input.getIpSrc() != null && !input.getIpSrc().isEmpty()) {
-            builder.matchIPSrc(IpPrefix.valueOf(input.getIpSrc()));
+            // khớp chính xác 1 IP với prefix 32
+            builder.matchIPSrc(IpPrefix.valueOf(IpAddress.valueOf(input.getIpSrc()), 32));
         }
         if (input.getIpDst() != null && !input.getIpDst().isEmpty()) {
-            builder.matchIPDst(IpPrefix.valueOf(input.getIpDst()));
+            builder.matchIPDst(IpPrefix.valueOf(IpAddress.valueOf(input.getIpDst()), 32));
         }
 
         // Nếu có port thì match port
@@ -88,6 +94,9 @@ public class ApplyFlowRule {
 
         TrafficSelector selector = builder.build();
 
+        // Tìm và xóa các flow rules hiện có có cùng selector
+        removeDuplicateFlowRules(deviceId, selector);
+
         // Tạo action để forward gói tin
         TrafficTreatment treatment = DefaultTrafficTreatment.builder()
                 .meter(MeterId.meterId(1))
@@ -105,5 +114,35 @@ public class ApplyFlowRule {
 
         // Áp dụng FlowRule vào thiết bị
         flowRuleService.applyFlowRules(flowRule);
+        log.info("Đã áp dụng flow rule mới với selector: {}", selector);
+    }
+
+    /**
+     * Tìm và xóa các flow rules đã tồn tại với cùng selector
+     * @param deviceId ID của thiết bị
+     * @param selector Selector cần kiểm tra trùng lặp
+     */
+    private void removeDuplicateFlowRules(DeviceId deviceId, TrafficSelector selector) {
+        // Lấy tất cả flow entries hiện có trên thiết bị
+        Iterable<FlowEntry> flowEntries = flowRuleService.getFlowEntries(deviceId);
+        
+        // Danh sách các rules cần xóa
+        List<FlowRule> rulesToRemove = new ArrayList<>();
+        
+        // Kiểm tra từng flow entry
+        for (FlowEntry entry : flowEntries) {
+            // So sánh selector của flow entry hiện có với selector mới
+            if (entry.selector().equals(selector) && entry.appId() == appId.id()) {
+                // Thêm vào danh sách cần xóa
+                rulesToRemove.add(entry);
+                log.info("Tìm thấy flow rule trùng lặp: {}", entry.id());
+            }
+        }
+        
+        // Xóa các flow rules trùng lặp
+        if (!rulesToRemove.isEmpty()) {
+            flowRuleService.removeFlowRules(rulesToRemove.toArray(new FlowRule[0]));
+            log.info("Đã xóa {} flow rules trùng lặp", rulesToRemove.size());
+        }
     }
 }

@@ -13,6 +13,7 @@ import org.onosproject.net.meter.Band;
 import org.onosproject.net.meter.DefaultBand;
 import org.onosproject.net.meter.DefaultMeterRequest;
 import org.onosproject.net.meter.Meter;
+import org.onosproject.net.meter.MeterCellId;
 import org.onosproject.net.meter.MeterRequest;
 import org.onosproject.net.meter.MeterService;
 import org.onosproject.net.meter.MeterStore;
@@ -56,28 +57,44 @@ public class ManagerMeter {
         log.info("ManagerMeter Stopped");
     }
 
-    public void add(CreateMeterDto input) {
+    /**
+     * Thêm meter mới hoặc trả về meter ID nếu đã tồn tại meter với cùng tham số
+     *
+     * @param input Thông tin meter cần tạo
+     * @return MeterCellId ID của meter (mới hoặc đã tồn tại)
+     */
+    public MeterCellId add(CreateMeterDto input) {
         log.info("Applying meter: {}", input);
 
         DeviceId deviceId = DeviceId.deviceId(input.getDeviceId());
         var meters = meterService.getMeters(deviceId);
 
-        // for (Meter meter : meters) {
-        //     for (Band band : meter.bands()) {
-        //         if (band.type() == Band.Type.DROP && band.rate() == 1000 && band.burst() == 1000) {
-        //             log.info("Meter with the same rate, burst size, and type already exists. Skipping...");
-        //             return;
-        //         }
-        //     }
-        // }
+        // Kiểm tra xem đã tồn tại meter với cùng tham số chưa
+        for (Meter meter : meters) {
+            // Kiểm tra từng band trong meter
+            for (Band band : meter.bands()) {
+                // So sánh thông số với input
+                if (band.type() == Band.Type.DROP && 
+                    band.rate() == input.getRate() && 
+                    band.burst() == input.getBurstSize()) {
+                    
+                    log.info("Meter với cùng rate={}, burstSize={}, type={} đã tồn tại. Sử dụng meter ID: {}", 
+                             input.getRate(), input.getBurstSize(), Band.Type.DROP, meter.id());
+                    
+                    // Trả về ID của meter đã tồn tại
+                    return meter.meterCellId();
+                }
+            }
+        }
 
+        // Nếu không tìm thấy meter trùng lặp, tạo mới
         Set<Band> bandSet = new HashSet<>();
 
         var bandBuilder = DefaultBand.builder()
                 .ofType(Band.Type.DROP)
-                .withRate(100)
-                .burstSize(100)
-                .dropPrecedence((short) 0);
+                .withRate(input.getRate())
+                .burstSize(input.getBurstSize())
+                .dropPrecedence((short) 0); // không drop packet
 
         bandSet.add(bandBuilder.build());
 
@@ -89,9 +106,8 @@ public class ManagerMeter {
 
         var meterSubmit = meterService.submit(meterRequest.add());
         var meterId = meterSubmit.meterCellId();
-        log.info("Meter ID: {}", meterId);
-
-        // FlowEntry flow = statsService.getFlowStatistics(deviceId);
-        // long droppedPackets = flow.droppedPackets();
+        log.info("Đã tạo meter mới với ID: {}", meterId);
+        
+        return meterId;
     }
 }
