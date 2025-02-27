@@ -21,7 +21,7 @@ class ClassificationHandler:
         self.MODEL_PATH = model_path
         self.TIME_WINDOW_MS = time_window_ms
         
-        # Dictionary lưu trữ gói tin theo cặp IP và thời gian
+        # Dictionary lưu trữ gói tin theo flow và thời gian
         self.traffic_buffer = defaultdict(list)
         # Dictionary lưu kết quả phân loại
         self.classification_results = {}
@@ -41,22 +41,44 @@ class ClassificationHandler:
         self.cleanup_thread = threading.Thread(target=self.clean_old_data, daemon=True)
         self.cleanup_thread.start()
     
+    def _generate_flow_key(self, packet_data):
+        """Tạo khóa duy nhất cho mỗi flow dựa trên 5-tuple
+        
+        Args:
+            packet_data: Dictionary chứa thông tin của gói tin
+            
+        Returns:
+            Chuỗi đại diện cho flow
+        """
+        src_ip = packet_data.get('src_ip', '')
+        dst_ip = packet_data.get('dst_ip', '')
+        src_port = packet_data.get('src_port', 0)
+        dst_port = packet_data.get('dst_port', 0)
+        ip_proto = packet_data.get('ip_proto', 0)
+        
+        # Tạo khóa flow 5-tuple
+        flow_key = f"{src_ip}:{src_port}-{dst_ip}:{dst_port}-{ip_proto}"
+        return flow_key
+    
     def clean_old_data(self):
         """Hàm dọn dẹp dữ liệu cũ trong buffer"""
         while True:
             time.sleep(60)  # Kiểm tra mỗi phút
             current_time = int(time.time() * 1000)  # ms
             with self.buffer_lock:
-                for key in list(self.traffic_buffer.keys()):
+                for flow_key in list(self.traffic_buffer.keys()):
                     # Giữ lại các gói tin trong khoảng 5 phút gần nhất
-                    self.traffic_buffer[key] = [
-                        packet for packet in self.traffic_buffer[key] 
+                    self.traffic_buffer[flow_key] = [
+                        packet for packet in self.traffic_buffer[flow_key] 
                         if (current_time - packet['time_epoch']) < 5*60*1000
                     ]
-                    # Xóa cặp IP không còn gói tin nào
-                    if not self.traffic_buffer[key]:
-                        del self.traffic_buffer[key]
-            logger.info(f"Đã dọn dẹp buffer, hiện đang theo dõi {len(self.traffic_buffer)} luồng dữ liệu")
+                    # Xóa flow không còn gói tin nào
+                    if not self.traffic_buffer[flow_key]:
+                        del self.traffic_buffer[flow_key]
+            
+            num_flows = len(self.traffic_buffer)
+            if num_flows > 0:
+                logger.info(f"Đã dọn dẹp buffer, hiện đang theo dõi {num_flows} luồng dữ liệu")
     
     def extract_features(self, packets):
         """Trích xuất đặc trưng từ danh sách gói tin trong một time window
@@ -83,8 +105,10 @@ class ClassificationHandler:
         packet_count = len(df)
         average_packet_length = df['frame_len'].mean()
         
-        # Tính thời gian giữa các gói tin
-        inter_packet_times = np.diff(df['timestamp']) / 1_000_000  # convert ns to ms
+        # Tính thời gian giữa các gói tin (chuyển đổi đơn vị thời gian phù hợp)
+        # Đảm bảo timestamp đã ở dạng số nguyên
+        df['timestamp'] = pd.to_numeric(df['timestamp'])
+        inter_packet_times = np.diff(df['timestamp']) / 1_000_000  # chuyển đổi nano giây sang milli giây
         
         # Tính các đặc trưng thời gian
         if len(inter_packet_times) > 0:
@@ -108,11 +132,11 @@ class ClassificationHandler:
         
         return features
     
-    def classify_flow(self, ip_pair, packets):
+    def classify_flow(self, flow_key, packets):
         """Phân loại luồng dữ liệu dựa trên mô hình đã huấn luyện
         
         Args:
-            ip_pair: Cặp IP nguồn-đích
+            flow_key: Khóa xác định flow
             packets: Danh sách các gói tin trong luồng
             
         Returns:
@@ -121,23 +145,45 @@ class ClassificationHandler:
         if self.model is None:
             logger.error("Không thể phân loại do không có mô hình")
             return None
+        
+        # Phân tách các thành phần của flow_key để đưa vào kết quả
+        flow_parts = flow_key.split('-')
+        src_info = flow_parts[0].split(':')
+        dst_info = flow_parts[1].split(':')
+        
+        src_ip = src_info[0]
+        src_port = src_info[1]
+        dst_ip = dst_info[0]
+        dst_port = dst_info[1]
+        ip_proto = flow_parts[2] if len(flow_parts) > 2 else "unknown"
 
-        # Nhóm gói tin theo time window
-        min_time = min(packet['time_epoch'] for packet in packets)
+        # Sắp xếp các gói tin theo thời gian
+        sorted_packets = sorted(packets, key=lambda p: p['time_epoch'])
         
-        # Gán window_id cho từng gói tin
-        for packet in packets:
-            packet['window_id'] = (packet['time_epoch'] - min_time) // self.TIME_WINDOW_MS
+        # Xác định thời điểm đầu tiên và cuối cùng trong chuỗi gói tin
+        min_time = sorted_packets[0]['time_epoch']
+        max_time = sorted_packets[-1]['time_epoch']
         
-        # Nhóm theo window_id
+        # Tính số cửa sổ thời gian
+        time_span = max_time - min_time
+        num_windows = max(1, int(time_span / self.TIME_WINDOW_MS))
+        
+        # Chia các gói tin vào các cửa sổ thời gian
         window_groups = defaultdict(list)
-        for packet in packets:
-            window_groups[packet['window_id']].append(packet)
+        
+        for packet in sorted_packets:
+            # Xác định window_id cho gói tin
+            window_id = (packet['time_epoch'] - min_time) // self.TIME_WINDOW_MS
+            window_groups[window_id].append(packet)
         
         # Trích xuất đặc trưng và phân loại từng cửa sổ thời gian
         window_results = []
         
         for window_id, window_packets in window_groups.items():
+            # Nếu cửa sổ không có đủ gói tin, bỏ qua
+            if len(window_packets) < 2:
+                continue
+                
             features = self.extract_features(window_packets)
             if features is None:
                 continue
@@ -157,7 +203,7 @@ class ClassificationHandler:
                 probability = np.max(self.model.predict_proba(feature_vector))
                 
                 window_results.append({
-                    'window_id': window_id,
+                    'window_id': int(window_id),
                     'start_time': min_time + window_id * self.TIME_WINDOW_MS,
                     'end_time': min_time + (window_id + 1) * self.TIME_WINDOW_MS,
                     'prediction': prediction,
@@ -174,13 +220,24 @@ class ClassificationHandler:
         # Lấy kết quả dự đoán từ cửa sổ có nhiều gói tin nhất
         best_window = max(window_results, key=lambda x: x['packet_count'])
         
-        return {
-            'ip_pair': ip_pair,
+        # Tạo kết quả chi tiết
+        result = {
+            'flow_key': flow_key,
+            'src_ip': src_ip,
+            'src_port': src_port,
+            'dst_ip': dst_ip,
+            'dst_port': dst_port,
+            'ip_proto': ip_proto,
             'classification': best_window['prediction'],
             'confidence': best_window['confidence'],
             'timestamp': datetime.now().isoformat(),
-            'packet_count': sum(len(packets) for packets in window_groups.values())
+            'packet_count': sum(len(window_packets) for window_packets in window_groups.values()),
+            'num_windows': len(window_groups),
+            'time_span_ms': time_span,
+            'window_id': best_window['window_id']
         }
+        
+        return result
     
     def process_packet(self, packet_data):
         """Xử lý gói tin mới, thêm vào buffer và phân loại nếu đủ điều kiện
@@ -191,54 +248,70 @@ class ClassificationHandler:
         Returns:
             Dictionary chứa kết quả phân loại hoặc None nếu chưa đủ dữ liệu để phân loại
         """
-        # Tạo khóa duy nhất cho cặp IP
-        src_ip = packet_data.get('src_ip')
-        dst_ip = packet_data.get('dst_ip')
-        ip_pair = f"{src_ip}-{dst_ip}"
+        # Tạo khóa cho flow
+        flow_key = self._generate_flow_key(packet_data)
         
         # Thêm gói tin vào buffer
         with self.buffer_lock:
-            self.traffic_buffer[ip_pair].append(packet_data)
+            self.traffic_buffer[flow_key].append(packet_data)
             
-            # Nếu có đủ số lượng gói tin trong một cặp IP, thực hiện phân loại
-            if len(self.traffic_buffer[ip_pair]) >= 10:
-                packets = self.traffic_buffer[ip_pair]
-                result = self.classify_flow(ip_pair, packets)
+            packets = self.traffic_buffer[flow_key]
+            
+            # Chỉ phân loại khi có đủ số lượng gói tin trong một flow
+            if len(packets) >= 10:
+                # Kiểm tra xem các gói tin có nằm trong cùng một cửa sổ thời gian không
+                timestamps = [p['time_epoch'] for p in packets]
+                min_time = min(timestamps)
+                max_time = max(timestamps)
                 
-                if result:
-                    self.classification_results[ip_pair] = result
+                # Nếu khoảng thời gian lớn hơn một cửa sổ, thì thực hiện phân loại
+                if (max_time - min_time) >= self.TIME_WINDOW_MS:
+                    result = self.classify_flow(flow_key, packets)
                     
-                    logger.info(f"Đã phân loại luồng {ip_pair}: {result['classification']} "
-                               f"(độ tin cậy: {result['confidence']:.2f})")
-                    
-                    # Trả về kết quả
-                    return result
+                    if result:
+                        self.classification_results[flow_key] = result
+                        
+                        logger.info(f"Đã phân loại flow {flow_key}: {result['classification']} "
+                                   f"(độ tin cậy: {result['confidence']:.2f})")
+                        
+                        # Trả về kết quả
+                        return result
         
         return None
     
-    def get_classification_results(self, src_ip=None, dst_ip=None):
-        """Lấy kết quả phân loại theo địa chỉ IP
+    def get_classification_results(self, src_ip=None, dst_ip=None, src_port=None, dst_port=None, ip_proto=None):
+        """Lấy kết quả phân loại theo các tiêu chí lọc
         
         Args:
             src_ip: IP nguồn (tùy chọn)
             dst_ip: IP đích (tùy chọn)
+            src_port: Cổng nguồn (tùy chọn)
+            dst_port: Cổng đích (tùy chọn)
+            ip_proto: Giao thức IP (tùy chọn)
             
         Returns:
             Danh sách các kết quả phân loại thỏa mãn điều kiện lọc
         """
         results = []
         with self.buffer_lock:
-            for ip_pair, result in self.classification_results.items():
-                if src_ip and dst_ip:
-                    if f"{src_ip}-{dst_ip}" == ip_pair:
-                        results.append(result)
-                elif src_ip:
-                    if ip_pair.startswith(f"{src_ip}-"):
-                        results.append(result)
-                elif dst_ip:
-                    if ip_pair.endswith(f"-{dst_ip}"):
-                        results.append(result)
-                else:
+            for flow_key, result in self.classification_results.items():
+                # Nếu kết quả không có đủ thông tin cần thiết, bỏ qua
+                if not all(key in result for key in ['src_ip', 'dst_ip', 'src_port', 'dst_port', 'ip_proto']):
+                    continue
+                
+                match = True
+                if src_ip and result['src_ip'] != src_ip:
+                    match = False
+                if dst_ip and result['dst_ip'] != dst_ip:
+                    match = False
+                if src_port and result['src_port'] != src_port:
+                    match = False
+                if dst_port and result['dst_port'] != dst_port:
+                    match = False
+                if ip_proto and result['ip_proto'] != str(ip_proto):
+                    match = False
+                
+                if match:
                     results.append(result)
         
         return results
