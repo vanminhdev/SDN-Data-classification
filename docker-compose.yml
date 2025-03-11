@@ -80,6 +80,10 @@ services:
       - 5007:5000
     environment:
       - INFLUXDB_ADMIN_TOKEN=Oj5-XrZQ24Glkaz7ApaVqAXKGrX61oi3T28wcT2o5BkBWemzUyJnyUNoxYv_KghZXpcXxFmz4RZSnwjDUYQoyA==
+      - ONOS_USERNAME=onos
+      - ONOS_PASSWORD=rocks
+      - ONOS_IP=192.168.0.2
+      - ONOS_PORT=8181
     networks:
       sdn_network:
         ipv4_address: 192.168.0.4

@@ -11,6 +11,7 @@ public class CreateFlowRuleDto {
     private int tcpPortDst;
     private int udpPortSrc;
     private int udpPortDst;
+    private String serviceType;  // Trường mới để nhận loại dịch vụ
 
     public CreateFlowRuleDto() {
     }
@@ -23,7 +24,8 @@ public class CreateFlowRuleDto {
         @JsonProperty("tcpPortSrc") int tcpPortSrc,
         @JsonProperty("tcpPortDst") int tcpPortDst,
         @JsonProperty("udpPortSrc") int udpPortSrc,
-        @JsonProperty("udpPortDst") int udpPortDst
+        @JsonProperty("udpPortDst") int udpPortDst,
+        @JsonProperty("serviceType") String serviceType
     ) {
         this.deviceId = deviceId;
         this.ipSrc = ipSrc;
@@ -32,13 +34,14 @@ public class CreateFlowRuleDto {
         this.tcpPortDst = tcpPortDst;
         this.udpPortSrc = udpPortSrc;
         this.udpPortDst = udpPortDst;
+        this.serviceType = serviceType;
     }
 
     @Override
     public String toString() {
         return "FlowRuleDto [deviceId=" + deviceId + ", ipSrc=" + ipSrc + ", ipDst=" + ipDst + ", tcpPortSrc="
                 + tcpPortSrc + ", tcpPortDst=" + tcpPortDst + ", udpPortSrc=" + udpPortSrc + ", udpPortDst="
-                + udpPortDst + "]";
+                + udpPortDst + ", serviceType=" + serviceType + "]";
     }
 
     public String getDeviceId() {
@@ -113,5 +116,13 @@ public class CreateFlowRuleDto {
             udpPortDst = 0;
         }
         this.udpPortDst = udpPortDst;
+    }
+
+    public String getServiceType() {
+        return serviceType;
+    }
+
+    public void setServiceType(String serviceType) {
+        this.serviceType = serviceType;
     }
 }

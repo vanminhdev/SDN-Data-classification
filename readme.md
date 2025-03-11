@@ -64,6 +64,9 @@
 - vào ui qua đường dẫn: <http://localhost:8181/onos/ui/>
   - username: onos
   - pasword: rocks
+- vào swagger qua đường dẫn: <http://localhost:8181/onos/v1/docs/>
+  - username: onos
+  - pasword: rocks
 - xem version: `cat ~/onos/VERSION`: `2.7.1`
 - tạo project:
   - clone project onos: `https://github.com/opennetworkinglab/onos.git`

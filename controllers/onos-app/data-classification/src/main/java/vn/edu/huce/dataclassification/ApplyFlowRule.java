@@ -20,6 +20,7 @@ import org.onosproject.net.flow.FlowRule;
 import org.onosproject.net.flow.FlowRuleService;
 import org.onosproject.net.flow.TrafficSelector;
 import org.onosproject.net.flow.TrafficTreatment;
+import org.onosproject.net.meter.MeterCellId;
 import org.onosproject.net.meter.MeterId;
 import org.osgi.service.component.annotations.Activate;
 import org.osgi.service.component.annotations.Component;
@@ -30,7 +31,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import vn.edu.huce.dataclassification.dtos.flowRule.CreateFlowRuleDto;
+import vn.edu.huce.dataclassification.dtos.meter.CreateMeterDto;
 import vn.edu.huce.dataclassification.utils.AppInfo;
+import vn.edu.huce.dataclassification.utils.ServiceType;
 
 @Component(immediate = true, service = { ApplyFlowRule.class })
 public class ApplyFlowRule {
@@ -44,6 +47,9 @@ public class ApplyFlowRule {
 
     @Reference(cardinality = ReferenceCardinality.MANDATORY)
     protected CoreService coreService;
+
+    @Reference(cardinality = ReferenceCardinality.MANDATORY)
+    private ManagerMeter managerMeter;
 
     private ApplicationId appId;
 
@@ -97,9 +103,17 @@ public class ApplyFlowRule {
         // Tìm và xóa các flow rules hiện có có cùng selector
         removeDuplicateFlowRules(deviceId, selector);
 
+        // Dịch vụ là gì thì sẽ tạo meter với thông số tương ứng
+        ServiceType serviceType = ServiceType.valueOf(input.getServiceType().toUpperCase());
+
+        CreateMeterDto meterDto = new CreateMeterDto(input.getDeviceId(), serviceType.getDefaultRate(),
+                serviceType.getDefaultBurst(), serviceType.getDefaultPriority());
+
+        var meterId = managerMeter.add(meterDto);
+
         // Tạo action để forward gói tin
         TrafficTreatment treatment = DefaultTrafficTreatment.builder()
-                .meter(MeterId.meterId(1))
+                .meter(meterId)
                 .build();
 
         // Tạo flow rule
@@ -119,16 +133,17 @@ public class ApplyFlowRule {
 
     /**
      * Tìm và xóa các flow rules đã tồn tại với cùng selector
+     * 
      * @param deviceId ID của thiết bị
      * @param selector Selector cần kiểm tra trùng lặp
      */
     private void removeDuplicateFlowRules(DeviceId deviceId, TrafficSelector selector) {
         // Lấy tất cả flow entries hiện có trên thiết bị
         Iterable<FlowEntry> flowEntries = flowRuleService.getFlowEntries(deviceId);
-        
+
         // Danh sách các rules cần xóa
         List<FlowRule> rulesToRemove = new ArrayList<>();
-        
+
         // Kiểm tra từng flow entry
         for (FlowEntry entry : flowEntries) {
             // So sánh selector của flow entry hiện có với selector mới
@@ -138,10 +153,12 @@ public class ApplyFlowRule {
                 log.info("Tìm thấy flow rule trùng lặp: {}", entry.id());
             }
         }
-        
+
         // Xóa các flow rules trùng lặp
         if (!rulesToRemove.isEmpty()) {
-            flowRuleService.removeFlowRules(rulesToRemove.toArray(new FlowRule[0]));
+            for (FlowRule flowRule : rulesToRemove) {
+                flowRuleService.removeFlowRules(flowRule);
+            }
             log.info("Đã xóa {} flow rules trùng lặp", rulesToRemove.size());
         }
     }

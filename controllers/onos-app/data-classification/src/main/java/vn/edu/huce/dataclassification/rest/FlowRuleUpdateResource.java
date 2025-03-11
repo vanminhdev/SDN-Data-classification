@@ -18,9 +18,13 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import io.atomix.primitive.operation.Operation;
 import vn.edu.huce.dataclassification.ApplyFlowRule;
 import vn.edu.huce.dataclassification.dtos.flowRule.CreateFlowRuleDto;
+import vn.edu.huce.dataclassification.utils.ServiceType;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Path("flowruleupdate")
 public class FlowRuleUpdateResource extends BaseWebResource {
+    private final Logger log = LoggerFactory.getLogger(getClass());
 
     @GET
     @Path("status")
@@ -44,14 +48,29 @@ public class FlowRuleUpdateResource extends BaseWebResource {
     public Response update(String data) {
         var applyFlowRuleService = get(ApplyFlowRule.class);
         CreateFlowRuleDto input;
+        
         try {
+            log.info("Received data: {}", data);
             input = this.mapper().readValue(data, CreateFlowRuleDto.class);
+            log.info("Parsed input: {}", input);
+            
+            // Kiểm tra xem serviceType có hợp lệ không (nếu được cung cấp)
+            if (input.getServiceType() != null && !input.getServiceType().isEmpty()) {
+                try {
+                    ServiceType serviceType = ServiceType.valueOf(input.getServiceType().toUpperCase());
+                    log.info("Valid service type detected: {}", serviceType);
+                } catch (IllegalArgumentException e) {
+                    log.warn("Invalid service type: {}. Will use default meter.", input.getServiceType());
+                }
+            }
+            
+            // Áp dụng flow rule
+            applyFlowRuleService.apply(input);
+            
+            return okResponse();
         } catch (JsonProcessingException e) {
+            log.error("Error parsing JSON: {}", e.getMessage());
             return badRequestResponse(e.getMessage());
         }
-        // FlowRuleDto input = new FlowRuleDto(deviceId, ipSrc, ipDst,
-        //         0, 0, 0, 0);
-        applyFlowRuleService.apply(input);
-        return okResponse();
     }
 }

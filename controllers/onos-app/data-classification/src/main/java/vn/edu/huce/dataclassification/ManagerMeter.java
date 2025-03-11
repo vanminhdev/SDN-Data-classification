@@ -14,6 +14,7 @@ import org.onosproject.net.meter.DefaultBand;
 import org.onosproject.net.meter.DefaultMeterRequest;
 import org.onosproject.net.meter.Meter;
 import org.onosproject.net.meter.MeterCellId;
+import org.onosproject.net.meter.MeterId;
 import org.onosproject.net.meter.MeterRequest;
 import org.onosproject.net.meter.MeterService;
 import org.onosproject.net.meter.MeterStore;
@@ -61,9 +62,9 @@ public class ManagerMeter {
      * Thêm meter mới hoặc trả về meter ID nếu đã tồn tại meter với cùng tham số
      *
      * @param input Thông tin meter cần tạo
-     * @return MeterCellId ID của meter (mới hoặc đã tồn tại)
+     * @return MeterId ID của meter (mới hoặc đã tồn tại)
      */
-    public MeterCellId add(CreateMeterDto input) {
+    public MeterId add(CreateMeterDto input) {
         log.info("Applying meter: {}", input);
 
         DeviceId deviceId = DeviceId.deviceId(input.getDeviceId());
@@ -82,7 +83,7 @@ public class ManagerMeter {
                              input.getRate(), input.getBurstSize(), Band.Type.DROP, meter.id());
                     
                     // Trả về ID của meter đã tồn tại
-                    return meter.meterCellId();
+                    return meter.id();
                 }
             }
         }
@@ -105,7 +106,7 @@ public class ManagerMeter {
                 .withBands(bandSet);
 
         var meterSubmit = meterService.submit(meterRequest.add());
-        var meterId = meterSubmit.meterCellId();
+        var meterId = meterSubmit.id();
         log.info("Đã tạo meter mới với ID: {}", meterId);
         
         return meterId;

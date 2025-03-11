@@ -4,6 +4,7 @@ import time
 
 from db_handler import DatabaseHandler
 from classification_handler import ClassificationHandler
+from flow_rule_handler import FlowRuleHandler
 
 app = Flask(__name__)
 
@@ -14,6 +15,7 @@ logger = logging.getLogger(__name__)
 # Khởi tạo handlers
 db = DatabaseHandler()
 classifier = ClassificationHandler()
+flow_handler = FlowRuleHandler()
 
 @app.route('/api/push-data', methods=['POST'])
 def receive_data():
@@ -27,7 +29,7 @@ def receive_data():
     # Lấy từng giá trị từ dữ liệu gửi đến
     try:
         # Chuyển đổi thời gian từ epoch thành ms
-        time_epoch = data.get('time_epoch', int(time.time() * 1000))
+        time_epoch = data.get('time_epoch')
         src_port = data.get('tcp_src_port')
         dst_port = data.get('tcp_dst_port')
         frame_len = data.get('frame_len')
@@ -60,6 +62,14 @@ def receive_data():
         # Trả về kết quả nếu có phân loại mới
         if classification_result:
             # Xử lý sau khi phân loại: set meter cho flow rule
+            service_type = classification_result.get('service_type')
+            logger.info(f"Flow classified as {service_type}, updating flow rule")
+            
+            # Gọi ONOS API để cập nhật flow rule
+            update_success = flow_handler.update_flow_rule(packet_data, service_type)
+            
+            # Thêm thông tin cập nhật vào kết quả
+            classification_result['flow_rule_updated'] = update_success
             
             return jsonify({
                 "status": "classified",
