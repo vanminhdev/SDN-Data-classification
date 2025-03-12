@@ -67,7 +67,7 @@ class InfluxDBExporter:
                 'ip_proto': 'ip_proto',
                 'device_id': 'device_id',
                 'frame_len': 'frame_len',
-                'lable': 'label',
+                'label': 'label',
                 '_time': 'timestamp'
             }
             

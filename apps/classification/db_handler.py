@@ -23,6 +23,9 @@ class DatabaseHandler:
 
     def save_traffic_data(self, data):
         try:
+            # Get label from environment variable or use a default if not set
+            label = os.getenv('LABEL', 'unknown')
+            
             point = Point("network_traffic") \
                 .tag("src_port", data['src_port']) \
                 .tag("dst_port", data['dst_port']) \
@@ -31,7 +34,7 @@ class DatabaseHandler:
                 .tag("device_id", data['device_id']) \
                 .tag("src_ip", data['src_ip']) \
                 .tag("dst_ip", data['dst_ip']) \
-                .tag("lable", 'video') \
+                .tag("label", label) \
                 .time(data['time_epoch'])
 
             self.write_api.write(bucket=self.INFLUXDB_BUCKET, record=point)

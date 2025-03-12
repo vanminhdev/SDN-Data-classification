@@ -5,6 +5,7 @@ import time
 from db_handler import DatabaseHandler
 from classification_handler import ClassificationHandler
 from flow_rule_handler import FlowRuleHandler
+import os
 
 app = Flask(__name__)
 
@@ -53,9 +54,17 @@ def receive_data():
         # Log dữ liệu nhận được
         logger.info(f"Received data: {packet_data}")
         
-        # Lưu dữ liệu vào cơ sở dữ liệu
-        db.save_traffic_data(packet_data)
-        
+        # Kiểm tra chế độ thu thập dữ liệu
+        is_collect_mode = os.environ.get('IS_COLLECT', 'false').lower() == 'true'
+
+        # Lưu dữ liệu không phân loại nếu đang ở chế độ thu thập
+        if is_collect_mode:
+            # Lưu dữ liệu vào cơ sở dữ liệu
+            db.save_traffic_data(packet_data)
+            logger.info("Running in data collection mode only, skipping classification")
+            return jsonify({"status": "collected"}), 200
+
+        # Continue with classification if not in collection mode
         # Xử lý phân loại
         classification_result = classifier.process_packet(packet_data)
         
