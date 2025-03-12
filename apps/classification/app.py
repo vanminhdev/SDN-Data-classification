@@ -61,10 +61,9 @@ def receive_data():
         if is_collect_mode:
             # Lưu dữ liệu vào cơ sở dữ liệu
             db.save_traffic_data(packet_data)
-            logger.info("Running in data collection mode only, skipping classification")
+            logger.info("Đã thu thập dữ liệu")
             return jsonify({"status": "collected"}), 200
 
-        # Continue with classification if not in collection mode
         # Xử lý phân loại
         classification_result = classifier.process_packet(packet_data)
         
@@ -72,7 +71,7 @@ def receive_data():
         if classification_result:
             # Xử lý sau khi phân loại: set meter cho flow rule
             service_type = classification_result.get('service_type')
-            logger.info(f"Flow classified as {service_type}, updating flow rule")
+            logger.info(f"Flow thuộc phân loại {service_type} -> đang update flow rule")
             
             # Gọi ONOS API để cập nhật flow rule
             update_success = flow_handler.update_flow_rule(packet_data, service_type)
@@ -84,8 +83,10 @@ def receive_data():
                 "status": "classified",
                 "result": classification_result
             }), 200
-        
-        return jsonify({"status": "received"}), 200
+        else:
+            logger.info("Chưa phân loại được gói tin")
+
+        return jsonify({"status": "received"}), 200 #mới tiếp nhận gói tin chưa phân loại
 
     except KeyError as e:
         return jsonify({"error": f"Missing field: {e}"}), 400

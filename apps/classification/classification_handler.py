@@ -276,7 +276,8 @@ class ClassificationHandler:
                         
                         # Trả về kết quả
                         return result
-        
+            else:
+                logger.debug(f"Chưa đủ gói tin để phân loại flow {flow_key}: hiện đang có {len(packets)}")
         return None
     
     def get_classification_results(self, src_ip=None, dst_ip=None, src_port=None, dst_port=None, ip_proto=None):

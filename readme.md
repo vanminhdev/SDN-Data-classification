@@ -80,6 +80,12 @@
     - trong file `pom.xml` uncomment các phần `onos.app.*` và điền thông tin phù hợp
     - chạy lại lệnh `mvn clean install`
     - sau khi chạy xong sẽ có thêm file `.oar` để cài đặt
+  - build tại project này
+
+    ```sh
+    mvn -f controllers/onos-app/data-classification clean install -DskipTests -Dcheckstyle.skip
+    ```
+
 - install app:
   - chạy lênh: `/root/onos/bin/onos-app localhost install! <tên app>.oar`
 - debug:
@@ -205,6 +211,17 @@
 
     ```sh
     h1 curl http://10.0.0.4:8000
+    ```
+
+- chạy tạo data test
+  - chạy mininet
+  - chạy lệnh từng host lần lượt
+
+    ```sh
+    h1 cd mkdata
+    h4 cd mkdata
+    h4 python3 server-web.py &
+    h1 python3 client-web.py
     ```
 
 - open vSwitch

@@ -3,6 +3,9 @@ import random
 import time
 from bs4 import BeautifulSoup
 import os
+from requests.packages.urllib3.exceptions import InsecureRequestWarning
+
+requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
 
 # Mảng các route mà client sẽ truy cập
 routes = [
@@ -12,7 +15,7 @@ routes = [
 ]
 
 # URL của server Flask (vì sử dụng SSL/TLS nên là https)
-server_url = "https://localhost:5000"
+server_url = "https://10.0.0.4:5000"
 
 # Các tài nguyên mà client sẽ tải xuống (CSS, JS)
 def download_resource(resource_url):
@@ -49,6 +52,7 @@ def access_random_page():
     # Chọn ngẫu nhiên một route
     route = random.choice(routes)
     url = server_url + route
+    print(f"Accessing {url}...")
     
     try:
         # Gửi yêu cầu GET đến trang HTML
@@ -66,9 +70,10 @@ def access_random_page():
     except Exception as e:
         print(f"An error occurred while accessing {url}: {e}")
         # Sleep một khoảng thời gian ngẫu nhiên từ 1 đến 5 giây
-        sleep_time = random.randint(1, 5)
-        print(f"Sleeping for {sleep_time} seconds before the next request...")
-        time.sleep(sleep_time)
+
+    sleep_time = random.uniform(0.1, 0.9)  # Random float between 0.1 and 0.9 seconds
+    print(f"Sleeping for {sleep_time:.2f} seconds before the next request...")
+    time.sleep(sleep_time)
 
 if __name__ == "__main__":
     # Client sẽ truy cập các route ngẫu nhiên 1000 lần

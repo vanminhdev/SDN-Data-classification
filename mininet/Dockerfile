@@ -14,6 +14,8 @@ RUN pip3 install Flask
 RUN pip3 install opencv-python
 RUN pip3 install pygame
 RUN pip3 install Wave
+RUN pip3 install requests
+RUN pip3 install beautifulsoup4
 # RUN pip3 install PyAudio
 
 CMD ["/bin/bash", "-c", "service openvswitch-switch start; python3 ${INIT_NET}; tail -f /dev/null"]

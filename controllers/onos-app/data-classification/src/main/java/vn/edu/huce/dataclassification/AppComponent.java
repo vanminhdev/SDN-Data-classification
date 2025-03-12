@@ -15,7 +15,16 @@
  */
 package vn.edu.huce.dataclassification;
 
+import org.onosproject.app.ApplicationService;
 import org.onosproject.cfg.ComponentConfigService;
+import org.onosproject.core.ApplicationId;
+import org.onosproject.net.DeviceId;
+import org.onosproject.net.device.DeviceService;
+import org.onosproject.net.flow.DefaultFlowRule;
+import org.onosproject.net.flow.DefaultTrafficSelector;
+import org.onosproject.net.flow.DefaultTrafficTreatment;
+import org.onosproject.net.flow.FlowRule;
+import org.onosproject.net.flow.FlowRuleService;
 import org.onosproject.net.packet.PacketProcessor;
 import org.onosproject.net.packet.PacketService;
 import org.osgi.service.component.ComponentContext;
@@ -28,6 +37,8 @@ import org.osgi.service.component.annotations.ReferenceCardinality;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import vn.edu.huce.dataclassification.utils.AppInfo;
+
 //import vn.edu.huce.dataclassification.utils.ApiClient;
 
 import java.util.Dictionary;
@@ -38,11 +49,9 @@ import static org.onlab.util.Tools.get;
 /**
  * Skeletal ONOS application component.
  */
-@Component(immediate = true,
-        service = {SomeInterface.class},
-        property = {
-                "someProperty=Some Default String Value",
-        })
+@Component(immediate = true, service = { SomeInterface.class }, property = {
+        "someProperty=Some Default String Value",
+})
 public class AppComponent implements SomeInterface {
 
     private final Logger log = LoggerFactory.getLogger(getClass());
@@ -54,16 +63,37 @@ public class AppComponent implements SomeInterface {
 
     @Reference(cardinality = ReferenceCardinality.MANDATORY)
     protected ComponentConfigService cfgService;
+
+    @Reference(cardinality = ReferenceCardinality.MANDATORY)
+    private ApplicationService appService;
+
+    @Reference(cardinality = ReferenceCardinality.MANDATORY)
+    protected DeviceService deviceService;
+
+    @Reference(cardinality = ReferenceCardinality.MANDATORY)
+    protected FlowRuleService flowRuleService;
+
     @Reference
     private PacketService packetService;
     private PacketProcessor packetProcessor = new MyPacketProcessor();
 
+    private ApplicationId appId;
+
     @Activate
     protected void activate() {
         cfgService.registerProperties(getClass());
+
+        appId = appService.getId(AppInfo.APP_NAME);
+
         if (packetService != null) {
             packetService.addProcessor(packetProcessor, PacketProcessor.director(0));
         }
+
+        // Lấy danh sách tất cả thiết bị (switch)
+        deviceService.getDevices().forEach(device -> {
+            applyCatchAllFlowRule(device.id());
+        });
+
         log.info("Data Classification is Started");
     }
 
@@ -88,5 +118,19 @@ public class AppComponent implements SomeInterface {
     @Override
     public void someMethod() {
         log.info("Invoked");
+    }
+
+    private void applyCatchAllFlowRule(DeviceId deviceId) {
+        FlowRule flowRule = DefaultFlowRule.builder()
+                .forDevice(deviceId)
+                .withSelector(DefaultTrafficSelector.builder().build()) // khớp mọi gói
+                .withTreatment(DefaultTrafficTreatment.builder().punt().build()) // đẩy lên controller
+                .withPriority(60000) // ưu tiên cao nhất
+                .fromApp(appId)
+                .makePermanent() // rule không hết hạn
+                .build();
+
+        flowRuleService.applyFlowRules(flowRule);
+        log.info("Applied catch-all flow rule to device: {}", deviceId);
     }
 }
