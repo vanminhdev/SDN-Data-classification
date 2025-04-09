@@ -74,7 +74,6 @@ public class ApplyFlowRule {
         var builder = DefaultTrafficSelector.builder();
 
         builder.matchEthType(Ethernet.TYPE_IPV4);
-
         // Nếu có IP thì match IP
         if (input.getIpSrc() != null && !input.getIpSrc().isEmpty()) {
             // khớp chính xác 1 IP với prefix 32
@@ -85,18 +84,18 @@ public class ApplyFlowRule {
         }
 
         // Nếu có port thì match port
-        if (input.getTcpPortSrc() != 0) {
-            builder.matchTcpSrc(TpPort.tpPort(input.getTcpPortSrc()));
-        }
-        if (input.getTcpPortDst() != 0) {
-            builder.matchTcpDst(TpPort.tpPort(input.getTcpPortDst()));
-        }
-        if (input.getUdpPortSrc() != 0) {
-            builder.matchUdpSrc(TpPort.tpPort(input.getUdpPortSrc()));
-        }
-        if (input.getUdpPortDst() != 0) {
-            builder.matchUdpDst(TpPort.tpPort(input.getUdpPortDst()));
-        }
+        // if (input.getTcpPortSrc() != 0) {
+        //     builder.matchTcpSrc(TpPort.tpPort(input.getTcpPortSrc()));
+        // }
+        // if (input.getTcpPortDst() != 0) {
+        //     builder.matchTcpDst(TpPort.tpPort(input.getTcpPortDst()));
+        // }
+        // if (input.getUdpPortSrc() != 0) {
+        //     builder.matchUdpSrc(TpPort.tpPort(input.getUdpPortSrc()));
+        // }
+        // if (input.getUdpPortDst() != 0) {
+        //     builder.matchUdpDst(TpPort.tpPort(input.getUdpPortDst()));
+        // }
 
         TrafficSelector selector = builder.build();
 

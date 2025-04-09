@@ -94,8 +94,8 @@ public class ManagerMeter {
         var bandBuilder = DefaultBand.builder()
                 .ofType(Band.Type.DROP)
                 .withRate(input.getRate())
-                .burstSize(input.getBurstSize())
-                .dropPrecedence((short) 0); // không drop packet
+                .burstSize(input.getBurstSize());
+                //.dropPrecedence((short) 0); // chỉ dùng cho REMARK band
 
         bandSet.add(bandBuilder.build());
 

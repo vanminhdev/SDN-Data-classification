@@ -50,7 +50,8 @@ class FlowRuleHandler:
         """
         try:
             # Chuẩn hóa service_type thành chữ thường
-            service_type = service_type.lower()
+            if service_type:
+                service_type = service_type.lower()
             
             # Kiểm tra service_type hợp lệ
             valid_types = ["web", "video", "voip"]

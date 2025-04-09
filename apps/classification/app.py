@@ -31,8 +31,8 @@ def receive_data():
     try:
         # Chuyển đổi thời gian từ epoch thành ms
         time_epoch = data.get('time_epoch')
-        src_port = data.get('tcp_src_port')
-        dst_port = data.get('tcp_dst_port')
+        src_port = data.get('src_port')
+        dst_port = data.get('dst_port')
         frame_len = data.get('frame_len')
         ip_proto = data.get('ip_proto')
         device_id = data.get('device_id')

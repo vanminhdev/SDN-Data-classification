@@ -61,6 +61,8 @@
 
 ## 3. Onos
 
+### 3.1 Lý thuyết cơ bản
+
 - vào ui qua đường dẫn: <http://localhost:8181/onos/ui/>
   - username: onos
   - pasword: rocks
@@ -172,6 +174,51 @@
     - Packet Processor:
         Bằng cách xử lý các gói tin Packet-In, có thể lấy thông tin về các switch mà gói tin đã đi qua. từ đây có thể áp dụng QoS cho các switch nó đi qua hoặc điều chỉnh flow rule để đi qua các switch khác
   - ONOS hỗ trợ QoS thông qua việc sử dụng `Meter` hoặc `Queue` trên switch
+
+### 3.2. Cấu hình QoS qua Meter
+
+- Khi thêm một meter với band REMARK vào một flow trong SDN, chỉ các gói tin thuộc flow đó mới bị ảnh hưởng. Các flow khác không sử dụng meter này sẽ không bị tác động trực tiếp bởi quy tắc đánh dấu (remark) hay giới hạn băng thông.
+
+- Khi têm một meter với band DROP vào một flow trong SDN, thì các gói tin thuộc flow đó có khả năng bị hủy bỏ (drop) khi vượt quá ngưỡng cấu hình.
+
+#### Cơ chế hoạt động và phạm vi ảnh hưởng
+
+##### 1. Phạm vi ảnh hưởng của Meter
+
+- **Meter chỉ áp dụng cho flow được gắn**: Một meter khi được áp dụng vào một flow rule, chỉ ảnh hưởng đến các gói tin khớp với flow rule đó
+- **Meter không ảnh hưởng trực tiếp đến các flow khác**: Các flow không được gắn meter này sẽ không bị hạn chế băng thông hay đánh dấu
+
+##### 2. Ảnh hưởng gián tiếp đến bức tranh tổng thể
+
+Mặc dù meter không ảnh hưởng trực tiếp đến các flow khác, nhưng có thể có ảnh hưởng gián tiếp:
+
+- **Băng thông được giải phóng**: Nếu một flow bị giới hạn băng thông, các flow khác có cơ hội sử dụng băng thông còn lại
+- **Ảnh hưởng ưu tiên**: Nếu bạn đánh dấu (REMARK) một số gói tin trong flow A, và các thiết bị mạng khác được cấu hình để ưu tiên xử lý các gói không bị đánh dấu, thì các flow khác có thể được ưu tiên hơn
+
+##### Ví dụ cụ thể
+
+Giả sử có 3 loại lưu lượng trên mạng:
+
+- **Flow video streaming**: Được gắn meter với cả DROP band (3Mbps) và REMARK band (2.5Mbps)
+- **Flow web browsing**: Không sử dụng meter
+- **Flow voip**: Không sử dụng meter
+
+**Kịch bản 1: Mạng không tắc nghẽn**
+
+- Video streaming sử dụng 2Mbps (dưới ngưỡng REMARK): không bị ảnh hưởng
+- Web browsing sử dụng 1Mbps: không bị ảnh hưởng
+- voip sử dụng 5Mbps: không bị ảnh hưởng
+- **Kết quả**: Tất cả flow đều hoạt động bình thường
+
+**Kịch bản 2: Flow video vượt ngưỡng**
+
+- Video streaming muốn sử dụng 4Mbps:
+  - Vượt ngưỡng REMARK (2.5Mbps): các gói tin bị đánh dấu
+  - Vượt ngưỡng DROP (3Mbps): các gói tin vượt quá bị drop
+  - Thực tế sử dụng: 3Mbps
+- Web browsing sử dụng 1Mbps: không bị ảnh hưởng
+- voip sử dụng 5Mbps: không bị ảnh hưởng
+- **Kết quả**: Chỉ video streaming bị giới hạn
 
 ## 4. mininet
 

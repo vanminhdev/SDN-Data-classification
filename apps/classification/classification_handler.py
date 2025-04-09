@@ -8,18 +8,19 @@ from collections import defaultdict
 from datetime import datetime
 
 # Cấu hình logger
+logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
 class ClassificationHandler:
-    def __init__(self, model_path='models/traffic_classifier.pkl', time_window_ms=1000):
+    def __init__(self, model_path='models/traffic_classifier.pkl', time_window_ns=3_000_000):
         """Khởi tạo Classification Handler
         
         Args:
             model_path: Đường dẫn đến file mô hình đã huấn luyện
-            time_window_ms: Kích thước cửa sổ thời gian (ms)
+            time_window_ns: Kích thước cửa sổ thời gian (ns)
         """
         self.MODEL_PATH = model_path
-        self.TIME_WINDOW_MS = time_window_ms
+        self.TIME_WINDOW_NS = time_window_ns
         
         # Dictionary lưu trữ gói tin theo flow và thời gian
         self.traffic_buffer = defaultdict(list)
@@ -108,7 +109,7 @@ class ClassificationHandler:
         # Tính thời gian giữa các gói tin (chuyển đổi đơn vị thời gian phù hợp)
         # Đảm bảo timestamp đã ở dạng số nguyên
         df['timestamp'] = pd.to_numeric(df['timestamp'])
-        inter_packet_times = np.diff(df['timestamp']) / 1_000_000  # chuyển đổi nano giây sang milli giây
+        inter_packet_times = np.diff(df['timestamp']) #đơn vị ns
         
         # Tính các đặc trưng thời gian
         if len(inter_packet_times) > 0:
@@ -166,14 +167,14 @@ class ClassificationHandler:
         
         # Tính số cửa sổ thời gian
         time_span = max_time - min_time
-        num_windows = max(1, int(time_span / self.TIME_WINDOW_MS))
+        num_windows = max(1, int(time_span / self.TIME_WINDOW_NS))
         
         # Chia các gói tin vào các cửa sổ thời gian
         window_groups = defaultdict(list)
         
         for packet in sorted_packets:
             # Xác định window_id cho gói tin
-            window_id = (packet['time_epoch'] - min_time) // self.TIME_WINDOW_MS
+            window_id = (packet['time_epoch'] - min_time) // self.TIME_WINDOW_NS
             window_groups[window_id].append(packet)
         
         # Trích xuất đặc trưng và phân loại từng cửa sổ thời gian
@@ -204,8 +205,8 @@ class ClassificationHandler:
                 
                 window_results.append({
                     'window_id': int(window_id),
-                    'start_time': min_time + window_id * self.TIME_WINDOW_MS,
-                    'end_time': min_time + (window_id + 1) * self.TIME_WINDOW_MS,
+                    'start_time': min_time + window_id * self.TIME_WINDOW_NS,
+                    'end_time': min_time + (window_id + 1) * self.TIME_WINDOW_NS,
                     'prediction': prediction,
                     'confidence': float(probability),
                     'packet_count': features['packet_count']
@@ -250,22 +251,23 @@ class ClassificationHandler:
         """
         # Tạo khóa cho flow
         flow_key = self._generate_flow_key(packet_data)
-        
+        logger.debug(f"Đang xử lý gói tin cho flow {flow_key}")
         # Thêm gói tin vào buffer
         with self.buffer_lock:
+            logger.debug(f"Đang thêm gói tin vào flow {flow_key}")
             self.traffic_buffer[flow_key].append(packet_data)
             
             packets = self.traffic_buffer[flow_key]
-            
+            logger.debug(f"Đã thêm gói tin vào flow {flow_key}: hiện có {len(packets)} gói tin")
             # Chỉ phân loại khi có đủ số lượng gói tin trong một flow
-            if len(packets) >= 10:
+            if len(packets) >= 5:
                 # Kiểm tra xem các gói tin có nằm trong cùng một cửa sổ thời gian không
                 timestamps = [p['time_epoch'] for p in packets]
                 min_time = min(timestamps)
                 max_time = max(timestamps)
                 
                 # Nếu khoảng thời gian lớn hơn một cửa sổ, thì thực hiện phân loại
-                if (max_time - min_time) >= self.TIME_WINDOW_MS:
+                if (max_time - min_time) >= self.TIME_WINDOW_NS:
                     result = self.classify_flow(flow_key, packets)
                     
                     if result:
