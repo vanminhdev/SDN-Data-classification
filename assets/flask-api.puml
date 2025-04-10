@@ -1,0 +1,39 @@
+@startuml
+title Phân loại dịch vụ theo cửa sổ thời gian (Chi tiết bên trong node)
+
+start
+
+:Nhận gói tin mới từ client\n(gửi từ ứng dụng Java);
+:Trích xuất flow_key từ 5-tuple\n(src_ip, src_port, dst_ip, dst_port, ip_proto);
+:Add vào packet_buffer\n(danh sách toàn bộ gói tin đã nhận);
+:Add vào flow_buffer[flow_key]\n(lưu danh sách gói tin thuộc flow);
+
+partition "Thread: run_classification() mỗi 200ms" {
+  :Đợi CLASSIFICATION_INTERVAL = 200ms;
+  :Lấy gói tin trong TIME_WINDOW_NS gần nhất\n(ví dụ: 3ms);
+  :Nhóm các gói theo flow_key;
+
+  repeat
+    :Duyệt từng flow trong flow_buffer;
+
+    if (Số gói < 5?) then (yes)
+      :Bỏ qua flow không đủ điều kiện;
+    else
+      if (Flow đã phân loại < 5s trước?) then (yes)
+        :Bỏ qua flow đã được xử lý gần đây;
+      else
+        :Trích xuất đặc trưng từ metadata\n(số gói, độ dài TB, thời gian,...);
+        :Phân loại bằng mô hình học máy\n(dự đoán nhãn dịch vụ);
+        :Ghi vào classification_queue\n(hàng đợi FIFO chứa kết quả gần nhất);
+
+        if (flow_handler != None) then (yes)
+          :Gọi update_flow_rule()\n(cập nhật QoS theo loại dịch vụ);
+        endif
+
+      endif
+    endif
+  repeat while (còn flow)
+}
+
+stop
+@enduml

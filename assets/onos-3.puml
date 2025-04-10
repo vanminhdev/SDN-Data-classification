@@ -1,0 +1,22 @@
+@startuml
+title (3) Tạo và quản lý Meter (QoS) theo loại dịch vụ
+
+start
+
+:Nhận yêu cầu tạo Meter từ lớp quản lý flow rule;
+:Lấy danh sách tất cả Meter đã tồn tại trên thiết bị;
+
+:Lọc theo cấu hình:\n- Ngưỡng tốc độ (rate - KBps)\n- burst size (lượng dữ liệu cho phép vượt tạm thời)\n- priority (độ ưu tiên);
+
+if (Tìm thấy Meter phù hợp?) then (yes)
+  :Trả lại MeterId đang có;
+else
+  :Tạo MeterRequest mới với thông số yêu cầu;
+  :Gửi yêu cầu tạo Meter tới thiết bị mạng;
+  :Ghi nhận MeterId vừa được cấp;
+endif
+
+:Trả lại MeterId cho lớp gọi;
+
+stop
+@enduml

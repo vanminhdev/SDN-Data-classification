@@ -1,0 +1,19 @@
+@startuml
+title (1) Xử lý gói tin và trích xuất metadata trong PacketProcessor
+
+start
+
+:Lắng nghe các gói tin trên các thiết bị mạng tại controller (ONOS);
+:Bắt các thông tin gói tin qua các API ở tầng thấp (Ethernet/IP);
+
+:Trích xuất thông tin:\n- IP nguồn và đích\n- Cổng TCP/UDP\n- Giao thức IP\n- Độ dài gói tin\n- Dấu thời gian (ns);
+
+:Tạo đối tượng DataFlowDto chứa toàn bộ thông tin metadata;
+:Khởi tạo kết nối HTTP và serialize JSON dữ liệu;
+
+:Gửi dữ liệu gói tin đến server Flask thông qua REST API (/api/push-data);
+
+:Đóng kết nối, trả quyền điều khiển lại cho ONOS;
+
+stop
+@enduml

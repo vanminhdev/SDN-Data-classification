@@ -266,9 +266,16 @@ Giả sử có 3 loại lưu lượng trên mạng:
 
     ```sh
     h1 cd mkdata
-    h4 cd mkdata
-    h4 python3 server-web.py &
+    h6 cd mkdata
+    h6 python3 server-web.py &
     h1 python3 client-web.py
+    ```
+
+    ```sh
+    h2 cd mkdata
+    h7 cd mkdata
+    h7 python3 server-video.py &
+    h2 python3 client-video.py
     ```
 
 - open vSwitch

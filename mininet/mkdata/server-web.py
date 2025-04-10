@@ -1,31 +1,8 @@
 
-from flask import Flask, render_template
+from flask import Flask, send_from_directory
 import os
 
-app = Flask(__name__, template_folder='templates')
-
-# Định nghĩa các route và liên kết với các trang HTML
-routes = [
-    '/',
-    '/about',
-    '/contact'
-]
-
-# Duyệt qua mảng các route và tạo các hàm view
-@app.route('/')
-def home():
-    return render_template('home.html')
-
-@app.route('/about')
-def about():
-    return render_template('about.html')
-
-@app.route('/contact')
-def contact():
-    return render_template('contact.html')
-
-# Cấu hình ứng dụng Flask để tìm các file tĩnh trong thư mục static
-app.config['STATIC_FOLDER'] = 'static'
+app = Flask(__name__, static_folder='static', static_url_path='')
 
 if __name__ == "__main__":
     # Chạy server với chứng chỉ SSL

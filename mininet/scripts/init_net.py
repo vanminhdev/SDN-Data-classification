@@ -3,6 +3,7 @@ from mininet.topo import Topo
 from mininet.net import Mininet
 from mininet.log import setLogLevel, info
 from mininet.node import Controller, OVSSwitch, RemoteController, Node
+from mininet.link import TCLink
 from mininet.cli import CLI
 
 os.system("mn -c")
@@ -20,7 +21,7 @@ switches = {}
 controllers = {}
 hosts = {}
 
-net = Mininet(controller=Controller, switch=OVSSwitch, waitConnected=False)
+net = Mininet(controller=Controller, switch=OVSSwitch, waitConnected=False, link=TCLink)
 
 for i in range(1, 9):
     host_name = 'h{}'.format(i)
@@ -32,26 +33,26 @@ for i in range(1, 9):
     switches[switch_name] = net.addSwitch(switch_name, protocols='OpenFlow13')
 
 # Add links
-net.addLink(hosts['h1'], switches['s1'])
-net.addLink(hosts['h2'], switches['s2'])
-net.addLink(hosts['h3'], switches['s3'])
-net.addLink(hosts['h4'], switches['s4'])
-net.addLink(hosts['h5'], switches['s5'])
-net.addLink(hosts['h6'], switches['s6'])
-net.addLink(hosts['h7'], switches['s7'])
-net.addLink(hosts['h8'], switches['s8'])
+net.addLink(hosts['h1'], switches['s1'], bw=10)
+net.addLink(hosts['h2'], switches['s2'], bw=10)
+net.addLink(hosts['h3'], switches['s3'], bw=10)
+net.addLink(hosts['h4'], switches['s4'], bw=10)
+net.addLink(hosts['h5'], switches['s5'], bw=10)
+net.addLink(hosts['h6'], switches['s6'], bw=10)
+net.addLink(hosts['h7'], switches['s7'], bw=10)
+net.addLink(hosts['h8'], switches['s8'], bw=10)
 
-net.addLink(switches['s1'], switches['s2'])
-net.addLink(switches['s2'], switches['s3'])
-net.addLink(switches['s3'], switches['s4'])
-net.addLink(switches['s4'], switches['s1'])
+net.addLink(switches['s1'], switches['s2'], bw=10)
+net.addLink(switches['s2'], switches['s3'], bw=10)
+net.addLink(switches['s3'], switches['s4'], bw=10)
+net.addLink(switches['s4'], switches['s1'], bw=10)
 
-net.addLink(switches['s4'], switches['s5'])
+net.addLink(switches['s4'], switches['s5'], bw=10)
 
-net.addLink(switches['s5'], switches['s6'])
-net.addLink(switches['s6'], switches['s7'])
-net.addLink(switches['s7'], switches['s8'])
-net.addLink(switches['s8'], switches['s5'])
+net.addLink(switches['s5'], switches['s6'], bw=10)
+net.addLink(switches['s6'], switches['s7'], bw=10)
+net.addLink(switches['s7'], switches['s8'], bw=10)
+net.addLink(switches['s8'], switches['s5'], bw=10)
 
 # hosts1 = [ net.addHost( 'h%d' % n ) for n in ( 3, 4 ) ]
 # hosts2 = [ net.addHost( 'h%d' % n ) for n in ( 5, 6 ) ]
@@ -65,7 +66,7 @@ net.addLink(switches['s8'], switches['s5'])
 #    s4 - s3
 #    |
 #    s5 - s6
-#    |    |    c2
+#    |    |    
 #    s8 - s7
 
 # Map switches and controller
@@ -87,10 +88,10 @@ switches["s2"].start([controllers["c1"]])
 switches["s3"].start([controllers["c1"]])
 switches["s4"].start([controllers["c1"]])
 
-# switches["s5"].start([controllers["c2"]])
-# switches["s6"].start([controllers["c2"]])
-# switches["s7"].start([controllers["c2"]])
-# switches["s8"].start([controllers["c2"]])
+switches["s5"].start([controllers["c1"]])
+switches["s6"].start([controllers["c1"]])
+switches["s7"].start([controllers["c1"]])
+switches["s8"].start([controllers["c1"]])
 
 # Add NAT connectivity
 net.addNAT().configDefault()

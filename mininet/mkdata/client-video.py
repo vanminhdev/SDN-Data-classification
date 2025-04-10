@@ -56,4 +56,4 @@ def video_stream_client(server_ip, port=12345):
     pygame.quit()
 
 if __name__ == "__main__":
-    video_stream_client("127.0.0.1")  # Thay bằng IP của server
+    video_stream_client("10.0.0.7")

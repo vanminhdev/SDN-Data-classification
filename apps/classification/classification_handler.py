@@ -6,28 +6,44 @@ import threading
 import time
 from collections import defaultdict
 from datetime import datetime
+import queue
 
 # Cấu hình logger
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
-class ClassificationHandler:
-    def __init__(self, model_path='models/traffic_classifier.pkl', time_window_ns=3_000_000):
+class ClassificationHandler:    
+    def __init__(self, model_path='models/traffic_classifier.pkl', time_window_ns=3_000_000, classification_interval=1.0, flow_handler=None):
         """Khởi tạo Classification Handler
         
         Args:
             model_path: Đường dẫn đến file mô hình đã huấn luyện
             time_window_ns: Kích thước cửa sổ thời gian (ns)
+            classification_interval: Khoảng thời gian giữa các lần phân loại (giây)
+            flow_handler: Đối tượng FlowRuleHandler để cập nhật flow rule
         """
         self.MODEL_PATH = model_path
         self.TIME_WINDOW_NS = time_window_ns
+        self.RECENT_CLASSIFICATION_WINDOW = 5_000_000_000  # 5 giây (ns)
+        self.CLASSIFICATION_INTERVAL = classification_interval  # Khoảng thời gian giữa các lần phân loại (giây)
+        self.flow_handler = flow_handler  # Lưu tham chiếu đến flow_handler
         
-        # Dictionary lưu trữ gói tin theo flow và thời gian
-        self.traffic_buffer = defaultdict(list)
-        # Dictionary lưu kết quả phân loại
-        self.classification_results = {}
+        # Dictionary lưu tất cả gói tin theo timestamp
+        self.packet_buffer = []
+        # Dictionary lưu trữ gói tin theo flow 
+        self.flow_buffer = defaultdict(list)
+        # Dictionary lưu thời điểm phân loại cuối cùng của mỗi flow
+        self.last_classification_time = {}
         # Khóa để đồng bộ hóa truy cập vào buffer
         self.buffer_lock = threading.Lock()
+        # Thời điểm xử lý window cuối cùng
+        self.last_window_time = 0
+        
+        # Hàng đợi lưu trữ kết quả phân loại mới nhất
+        self.classification_queue = queue.Queue(maxsize=10000)
+        
+        # Cờ kiểm soát các thread
+        self.running = True
         
         # Tải mô hình phân loại
         self.model = None
@@ -37,10 +53,14 @@ class ClassificationHandler:
             logger.info("Đã tải mô hình phân loại thành công")
         except Exception as e:
             logger.error(f"Không thể tải mô hình phân loại: {e}")
-
+            
         # Khởi động thread dọn dẹp
         self.cleanup_thread = threading.Thread(target=self.clean_old_data, daemon=True)
         self.cleanup_thread.start()
+        
+        # Khởi động thread phân loại
+        self.classification_thread = threading.Thread(target=self.run_classification, daemon=True)
+        self.classification_thread.start()
     
     def _generate_flow_key(self, packet_data):
         """Tạo khóa duy nhất cho mỗi flow dựa trên 5-tuple
@@ -65,21 +85,31 @@ class ClassificationHandler:
         """Hàm dọn dẹp dữ liệu cũ trong buffer"""
         while True:
             time.sleep(60)  # Kiểm tra mỗi phút
-            current_time = int(time.time() * 1000)  # ms
+            current_time = int(time.time() * 1_000_000_000)  # ns
             with self.buffer_lock:
-                for flow_key in list(self.traffic_buffer.keys()):
-                    # Giữ lại các gói tin trong khoảng 5 phút gần nhất
-                    self.traffic_buffer[flow_key] = [
-                        packet for packet in self.traffic_buffer[flow_key] 
-                        if (current_time - packet['time_epoch']) < 5*60*1000
-                    ]
-                    # Xóa flow không còn gói tin nào
-                    if not self.traffic_buffer[flow_key]:
-                        del self.traffic_buffer[flow_key]
+                # Giữ lại các gói tin trong khoảng 5 phút gần nhất
+                five_minutes_ago = current_time - 5 * 60 * 1_000_000_000
+                self.packet_buffer = [
+                    packet for packet in self.packet_buffer 
+                    if packet['time_epoch'] > five_minutes_ago
+                ]
+                  # Cập nhật flow_buffer dựa trên packet_buffer mới
+                self.flow_buffer.clear()
+                for packet in self.packet_buffer:
+                    flow_key = self._generate_flow_key(packet)
+                    self.flow_buffer[flow_key].append(packet)
+                
+                # Xóa thời gian phân loại cũ (quá 10 phút)
+                ten_minutes_ago = current_time - 10 * 60 * 1_000_000_000
+                for flow_key in list(self.last_classification_time.keys()):
+                    classification_time = self.last_classification_time[flow_key]
+                    if classification_time < ten_minutes_ago:
+                        del self.last_classification_time[flow_key]
             
-            num_flows = len(self.traffic_buffer)
-            if num_flows > 0:
-                logger.info(f"Đã dọn dẹp buffer, hiện đang theo dõi {num_flows} luồng dữ liệu")
+            num_packets = len(self.packet_buffer)
+            num_flows = len(self.flow_buffer)
+            if num_packets > 0 or num_flows > 0:
+                logger.info(f"Đã dọn dẹp buffer, hiện đang theo dõi {num_packets} gói tin, {num_flows} luồng dữ liệu")
     
     def extract_features(self, packets):
         """Trích xuất đặc trưng từ danh sách gói tin trong một time window
@@ -133,8 +163,8 @@ class ClassificationHandler:
         
         return features
     
-    def classify_flow(self, flow_key, packets):
-        """Phân loại luồng dữ liệu dựa trên mô hình đã huấn luyện
+    def classify_single_flow(self, flow_key, packets):
+        """Phân loại một luồng dữ liệu duy nhất dựa trên mô hình đã huấn luyện
         
         Args:
             flow_key: Khóa xác định flow
@@ -145,6 +175,11 @@ class ClassificationHandler:
         """
         if self.model is None:
             logger.error("Không thể phân loại do không có mô hình")
+            return None
+        
+        # Kiểm tra số lượng gói tin tối thiểu
+        if len(packets) < 5:
+            logger.debug(f"Flow {flow_key} chưa đủ gói tin để phân loại (cần ít nhất 5)")
             return None
         
         # Phân tách các thành phần của flow_key để đưa vào kết quả
@@ -161,129 +196,179 @@ class ClassificationHandler:
         # Sắp xếp các gói tin theo thời gian
         sorted_packets = sorted(packets, key=lambda p: p['time_epoch'])
         
-        # Xác định thời điểm đầu tiên và cuối cùng trong chuỗi gói tin
-        min_time = sorted_packets[0]['time_epoch']
-        max_time = sorted_packets[-1]['time_epoch']
-        
-        # Tính số cửa sổ thời gian
-        time_span = max_time - min_time
-        num_windows = max(1, int(time_span / self.TIME_WINDOW_NS))
-        
-        # Chia các gói tin vào các cửa sổ thời gian
-        window_groups = defaultdict(list)
-        
-        for packet in sorted_packets:
-            # Xác định window_id cho gói tin
-            window_id = (packet['time_epoch'] - min_time) // self.TIME_WINDOW_NS
-            window_groups[window_id].append(packet)
-        
-        # Trích xuất đặc trưng và phân loại từng cửa sổ thời gian
-        window_results = []
-        
-        for window_id, window_packets in window_groups.items():
-            # Nếu cửa sổ không có đủ gói tin, bỏ qua
-            if len(window_packets) < 2:
-                continue
-                
-            features = self.extract_features(window_packets)
-            if features is None:
-                continue
-                
-            # Chuyển đặc trưng thành mảng để dự đoán
-            feature_vector = np.array([[
-                features['packet_count'],
-                features['average_packet_length'],
-                features['average_inter_packet_time'],
-                features['packet_size_variance'],
-                features['inter_packet_time_variance']
-            ]])
-            
-            # Dự đoán
-            try:
-                prediction = self.model.predict(feature_vector)[0]
-                probability = np.max(self.model.predict_proba(feature_vector))
-                
-                window_results.append({
-                    'window_id': int(window_id),
-                    'start_time': min_time + window_id * self.TIME_WINDOW_NS,
-                    'end_time': min_time + (window_id + 1) * self.TIME_WINDOW_NS,
-                    'prediction': prediction,
-                    'confidence': float(probability),
-                    'packet_count': features['packet_count']
-                })
-            except Exception as e:
-                logger.error(f"Lỗi khi dự đoán: {e}")
-        
-        # Nếu không có kết quả, trả về None
-        if not window_results:
+        # Trích xuất đặc trưng
+        features = self.extract_features(sorted_packets)
+        if features is None:
+            logger.debug(f"Không thể trích xuất đặc trưng cho flow {flow_key}")
             return None
+            
+        # Chuyển đặc trưng thành mảng để dự đoán
+        feature_vector = np.array([[
+            features['packet_count'],
+            features['average_packet_length'],
+            features['average_inter_packet_time'],
+            features['packet_size_variance'],
+            features['inter_packet_time_variance']
+        ]])
         
-        # Lấy kết quả dự đoán từ cửa sổ có nhiều gói tin nhất
-        best_window = max(window_results, key=lambda x: x['packet_count'])
+        # Dự đoán
+        try:
+            prediction = self.model.predict(feature_vector)[0]
+            probability = np.max(self.model.predict_proba(feature_vector))
+            
+            # Tính thông tin thời gian của flow
+            min_time = sorted_packets[0]['time_epoch']
+            max_time = sorted_packets[-1]['time_epoch']
+            time_span = max_time - min_time
+            
+            # Tạo kết quả chi tiết
+            result = {
+                'flow_key': flow_key,
+                'src_ip': src_ip,
+                'src_port': src_port,
+                'dst_ip': dst_ip,
+                'dst_port': dst_port,
+                'ip_proto': ip_proto,
+                'classification': prediction,
+                'confidence': float(probability),
+                'timestamp': datetime.now().isoformat(),
+                'packet_count': len(sorted_packets),
+                'time_span_ns': time_span,
+                'start_time': min_time,
+                'end_time': max_time
+            }
+            
+            return result
+        except Exception as e:
+            logger.error(f"Lỗi khi dự đoán cho flow {flow_key}: {e}")
+            return None
+
+    def run_classification(self):
+        """Hàm chạy trong một thread riêng, thực hiện phân loại định kỳ cho tất cả các flow
+        """
+        logger.info("Bắt đầu thread phân loại định kỳ")
         
-        # Tạo kết quả chi tiết
-        result = {
-            'flow_key': flow_key,
-            'src_ip': src_ip,
-            'src_port': src_port,
-            'dst_ip': dst_ip,
-            'dst_port': dst_port,
-            'ip_proto': ip_proto,
-            'classification': best_window['prediction'],
-            'confidence': best_window['confidence'],
-            'timestamp': datetime.now().isoformat(),
-            'packet_count': sum(len(window_packets) for window_packets in window_groups.values()),
-            'num_windows': len(window_groups),
-            'time_span_ms': time_span,
-            'window_id': best_window['window_id']
-        }
-        
-        return result
+        while self.running:
+            try:
+                # Đợi đến lần phân loại tiếp theo
+                time.sleep(self.CLASSIFICATION_INTERVAL)
+                
+                current_time = int(time.time() * 1_000_000_000)  # ns
+                window_start_time = current_time - self.TIME_WINDOW_NS
+                
+                with self.buffer_lock:
+                    # Lấy các gói tin trong time window hiện tại
+                    window_packets = [p for p in self.packet_buffer 
+                                     if window_start_time <= p['time_epoch'] <= current_time]
+                    
+                    # Nhóm gói tin theo flow
+                    window_flows = defaultdict(list)
+                    for p in window_packets:
+                        flow_k = self._generate_flow_key(p)
+                        window_flows[flow_k].append(p)
+                    
+                    # Phân loại tất cả flow đủ điều kiện
+                    classified_flows = []
+                    
+                    for flow_key, packets in window_flows.items():
+                        # Kiểm tra điều kiện để phân loại
+                        if len(packets) < 5:
+                            logger.debug(f"Bỏ qua flow {flow_key} - không đủ gói tin ({len(packets)}/5)")
+                            continue
+                        
+                        # Kiểm tra thời gian phân loại gần đây
+                        last_time = self.last_classification_time.get(flow_key, 0)
+                        if current_time - last_time < self.RECENT_CLASSIFICATION_WINDOW:
+                            logger.debug(f"Bỏ qua flow {flow_key} - mới phân loại gần đây ({(current_time - last_time)/1_000_000_000:.2f}s)")
+                            continue
+                        
+                        # Phân loại flow
+                        result = self.classify_single_flow(flow_key, packets)
+                        if result:
+                            # Cập nhật thời gian phân loại cuối cùng
+                            self.last_classification_time[flow_key] = current_time
+                            # Thêm trường service_type
+                            result['service_type'] = result['classification'].upper()
+                            
+                            logger.info(f"Đã phân loại flow {flow_key}: {result['classification']} "
+                                        f"(độ tin cậy: {result['confidence']:.2f})")
+                            
+                            # Thêm vào hàng đợi kết quả (loại bỏ kết quả cũ nếu đầy)
+                            try:
+                                self.classification_queue.put_nowait(result)
+                            except queue.Full:
+                                try:
+                                    # Loại bỏ kết quả cũ nhất nếu hàng đợi đầy
+                                    self.classification_queue.get_nowait()
+                                    self.classification_queue.put_nowait(result)
+                                except:
+                                    pass
+                            
+                            # Tự động cập nhật flow rule nếu flow_handler được cung cấp
+                            if self.flow_handler:
+                                service_type = result['service_type']
+                                # Lấy gói tin mới nhất của flow này để gửi đến flow_handler
+                                latest_packet = packets[-1] if packets else None
+                                if latest_packet:
+                                    logger.info(f"Tự động cập nhật flow rule cho flow {flow_key} với service_type {service_type}")
+                                    update_success = self.flow_handler.update_flow_rule(latest_packet, service_type)
+                                    # Thêm thông tin cập nhật vào kết quả
+                                    result['flow_rule_updated'] = update_success
+                                
+                            classified_flows.append(result)
+                    
+                    if classified_flows:
+                        logger.info(f"Đã phân loại {len(classified_flows)} flow trong chu kỳ phân loại này")
+            
+            except Exception as e:
+                logger.error(f"Lỗi trong thread phân loại: {e}")
+                time.sleep(5)  # Đợi một lúc trước khi thử lại nếu có lỗi
     
-    def process_packet(self, packet_data):
-        """Xử lý gói tin mới, thêm vào buffer và phân loại nếu đủ điều kiện
+    def simplified_process_packet(self, packet_data):
+        """Thêm gói tin vào buffer để phân loại định kỳ và trả về kết quả phân loại mới nhất nếu có
         
         Args:
             packet_data: Dictionary chứa thông tin của gói tin
             
         Returns:
-            Dictionary chứa kết quả phân loại hoặc None nếu chưa đủ dữ liệu để phân loại
+            Dictionary chứa kết quả phân loại nếu có sẵn, None nếu không có
         """
         # Tạo khóa cho flow
         flow_key = self._generate_flow_key(packet_data)
-        logger.debug(f"Đang xử lý gói tin cho flow {flow_key}")
+        
         # Thêm gói tin vào buffer
         with self.buffer_lock:
-            logger.debug(f"Đang thêm gói tin vào flow {flow_key}")
-            self.traffic_buffer[flow_key].append(packet_data)
-            
-            packets = self.traffic_buffer[flow_key]
-            logger.debug(f"Đã thêm gói tin vào flow {flow_key}: hiện có {len(packets)} gói tin")
-            # Chỉ phân loại khi có đủ số lượng gói tin trong một flow
-            if len(packets) >= 5:
-                # Kiểm tra xem các gói tin có nằm trong cùng một cửa sổ thời gian không
-                timestamps = [p['time_epoch'] for p in packets]
-                min_time = min(timestamps)
-                max_time = max(timestamps)
-                
-                # Nếu khoảng thời gian lớn hơn một cửa sổ, thì thực hiện phân loại
-                if (max_time - min_time) >= self.TIME_WINDOW_NS:
-                    result = self.classify_flow(flow_key, packets)
-                    
-                    if result:
-                        self.classification_results[flow_key] = result
-                        
-                        logger.info(f"Đã phân loại flow {flow_key}: {result['classification']} "
-                                   f"(độ tin cậy: {result['confidence']:.2f})")
-                        
-                        # Trả về kết quả
-                        return result
-            else:
-                logger.debug(f"Chưa đủ gói tin để phân loại flow {flow_key}: hiện đang có {len(packets)}")
+            self.packet_buffer.append(packet_data)
+            self.flow_buffer[flow_key].append(packet_data)
+            logger.debug(f"Đã thêm gói tin vào flow {flow_key}: hiện có {len(self.flow_buffer[flow_key])} gói tin")
+        
+        # Kiểm tra xem có kết quả phân loại mới nhất cho flow này không
+        try:
+            # Kiểm tra tất cả kết quả trong hàng đợi
+            results = list(self.classification_queue.queue)
+            for result in results:
+                if result['flow_key'] == flow_key:
+                    # Đã tìm thấy kết quả phân loại cho flow này
+                    return result
+        except:
+            pass
+        
+        # Không có kết quả phân loại cho flow hiện tại
         return None
-    
+            
+    def get_latest_classification_results(self):
+        """Lấy tất cả kết quả phân loại gần đây
+        
+        Returns:
+            List chứa các kết quả phân loại gần đây nhất
+        """
+        try:
+            return list(self.classification_queue.queue)
+        except:
+            return []
+            
     def get_classification_results(self, src_ip=None, dst_ip=None, src_port=None, dst_port=None, ip_proto=None):
-        """Lấy kết quả phân loại theo các tiêu chí lọc
+        """Lọc kết quả phân loại theo các tiêu chí
         
         Args:
             src_ip: IP nguồn (tùy chọn)
@@ -296,25 +381,26 @@ class ClassificationHandler:
             Danh sách các kết quả phân loại thỏa mãn điều kiện lọc
         """
         results = []
-        with self.buffer_lock:
-            for flow_key, result in self.classification_results.items():
-                # Nếu kết quả không có đủ thông tin cần thiết, bỏ qua
-                if not all(key in result for key in ['src_ip', 'dst_ip', 'src_port', 'dst_port', 'ip_proto']):
-                    continue
-                
-                match = True
-                if src_ip and result['src_ip'] != src_ip:
-                    match = False
-                if dst_ip and result['dst_ip'] != dst_ip:
-                    match = False
-                if src_port and result['src_port'] != src_port:
-                    match = False
-                if dst_port and result['dst_port'] != dst_port:
-                    match = False
-                if ip_proto and result['ip_proto'] != str(ip_proto):
-                    match = False
-                
-                if match:
-                    results.append(result)
+        all_results = self.get_latest_classification_results()
+        
+        for result in all_results:
+            # Nếu kết quả không có đủ thông tin cần thiết, bỏ qua
+            if not all(key in result for key in ['src_ip', 'dst_ip', 'src_port', 'dst_port', 'ip_proto']):
+                continue
+            
+            match = True
+            if src_ip and result['src_ip'] != src_ip:
+                match = False
+            if dst_ip and result['dst_ip'] != dst_ip:
+                match = False
+            if src_port and result['src_port'] != src_port:
+                match = False
+            if dst_port and result['dst_port'] != dst_port:
+                match = False
+            if ip_proto and result['ip_proto'] != str(ip_proto):
+                match = False
+            
+            if match:
+                results.append(result)
         
         return results

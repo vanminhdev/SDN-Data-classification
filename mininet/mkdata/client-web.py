@@ -4,18 +4,22 @@ import time
 from bs4 import BeautifulSoup
 import os
 from requests.packages.urllib3.exceptions import InsecureRequestWarning
+import urllib.parse
 
 requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
 
 # Mảng các route mà client sẽ truy cập
-routes = [
-    '/',
-    '/about',
-    '/contact'
-]
+# Lấy danh sách các file trong thư mục templates và tạo routes tương ứng
+templates_dir = os.path.join(os.path.dirname(__file__), 'static')
+routes = []
+
+for filename in os.listdir(templates_dir):
+    if filename.endswith('.html'):
+        route = f"/{urllib.parse.quote(filename)}"
+        routes.append(route)
 
 # URL của server Flask (vì sử dụng SSL/TLS nên là https)
-server_url = "https://10.0.0.4:5000"
+server_url = "https://10.0.0.6:5000"
 
 # Các tài nguyên mà client sẽ tải xuống (CSS, JS)
 def download_resource(resource_url):

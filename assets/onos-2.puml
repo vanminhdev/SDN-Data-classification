@@ -1,0 +1,21 @@
+@startuml
+title (2) Áp dụng Flow Rule tương ứng với dịch vụ phân loại
+
+start
+
+:Nhận yêu cầu cập nhật rule từ Flask (CreateFlowRuleDto);
+:Xác định thiết bị mạng cần cấu hình (deviceId);
+:Xây dựng điều kiện nhận diện flow:\n- IP nguồn/đích\n- Cổng TCP hoặc UDP;
+
+:Chuyển loại dịch vụ (serviceType) thành cấu hình QoS tương ứng\n(set Meter cho thiết bị);
+:Gọi lớp Meter Manager để tạo hoặc lấy MeterId tương ứng với dịch vụ;
+
+:Tạo hành động xử lý (treatment):\n- Áp dụng meter\n- Giữ nguyên forward action\nCho phép forward (chuyển tiếp gói tin) như mặc định;
+
+:Xây dựng FlowRule đầy đủ (selector + treatment + thời hạn + ưu tiên);
+:Kiểm tra và gỡ rule cũ nếu trùng selector;
+
+:Áp dụng FlowRule mới vào thiết bị OpenFlow qua API ONOS;
+
+stop
+@enduml

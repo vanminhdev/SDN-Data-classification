@@ -2,7 +2,7 @@ from flask import Flask, request, jsonify
 import logging
 import time
 
-from db_handler import DatabaseHandler
+from db.db_handler_mongo import DatabaseHandler
 from classification_handler import ClassificationHandler
 from flow_rule_handler import FlowRuleHandler
 import os
@@ -15,8 +15,8 @@ logger = logging.getLogger(__name__)
 
 # Khởi tạo handlers
 db = DatabaseHandler()
-classifier = ClassificationHandler()
 flow_handler = FlowRuleHandler()
+classifier = ClassificationHandler(flow_handler=flow_handler)
 
 @app.route('/api/push-data', methods=['POST'])
 def receive_data():
@@ -29,7 +29,6 @@ def receive_data():
     
     # Lấy từng giá trị từ dữ liệu gửi đến
     try:
-        # Chuyển đổi thời gian từ epoch thành ms
         time_epoch = data.get('time_epoch')
         src_port = data.get('src_port')
         dst_port = data.get('dst_port')
@@ -53,10 +52,9 @@ def receive_data():
 
         # Log dữ liệu nhận được
         logger.info(f"Received data: {packet_data}")
-        
-        # Kiểm tra chế độ thu thập dữ liệu
+          # Kiểm tra chế độ thu thập dữ liệu
         is_collect_mode = os.environ.get('IS_COLLECT', 'false').lower() == 'true'
-
+        
         # Lưu dữ liệu không phân loại nếu đang ở chế độ thu thập
         if is_collect_mode:
             # Lưu dữ liệu vào cơ sở dữ liệu
@@ -64,29 +62,23 @@ def receive_data():
             logger.info("Đã thu thập dữ liệu")
             return jsonify({"status": "collected"}), 200
 
-        # Xử lý phân loại
-        classification_result = classifier.process_packet(packet_data)
+        # Thêm gói tin vào buffer cho phân loại định kỳ và kiểm tra kết quả phân loại mới nhất
+        classification_result = classifier.simplified_process_packet(packet_data)
         
-        # Trả về kết quả nếu có phân loại mới
+        # Nếu có kết quả phân loại cho flow này
         if classification_result:
-            # Xử lý sau khi phân loại: set meter cho flow rule
+            # Phân loại đã được tự động cập nhật trong thread phân loại
             service_type = classification_result.get('service_type')
-            logger.info(f"Flow thuộc phân loại {service_type} -> đang update flow rule")
-            
-            # Gọi ONOS API để cập nhật flow rule
-            update_success = flow_handler.update_flow_rule(packet_data, service_type)
-            
-            # Thêm thông tin cập nhật vào kết quả
-            classification_result['flow_rule_updated'] = update_success
+            logger.info(f"Flow thuộc phân loại {service_type}")
             
             return jsonify({
                 "status": "classified",
                 "result": classification_result
             }), 200
         else:
-            logger.info("Chưa phân loại được gói tin")
-
-        return jsonify({"status": "received"}), 200 #mới tiếp nhận gói tin chưa phân loại
+            # Gói tin đã được đưa vào buffer, đang đợi phân loại
+            logger.info("Đã thêm gói tin vào buffer, đang đợi phân loại")
+            return jsonify({"status": "buffered"}), 200
 
     except KeyError as e:
         return jsonify({"error": f"Missing field: {e}"}), 400

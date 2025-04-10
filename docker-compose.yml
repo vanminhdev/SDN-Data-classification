@@ -36,9 +36,9 @@ services:
     build:
       context: ./controllers
       dockerfile: Dockerfile.onos
-      args:
-        - ONOS_DATA_CLASSIFICATION_OAR=${ONOS_DATA_CLASSIFICATION_OAR}
-        - ONOS_DATA_CLASSIFICATION_VERSION=${ONOS_DATA_CLASSIFICATION_VERSION}
+      # args:
+        # - ONOS_DATA_CLASSIFICATION_OAR=${ONOS_DATA_CLASSIFICATION_OAR}
+        # - ONOS_DATA_CLASSIFICATION_VERSION=${ONOS_DATA_CLASSIFICATION_VERSION}
     environment:
       - ONOS_APPS="drivers,hostprovider,lldpprovider,gui2,fwd,openflow,openflow-base,optical-model"
     ports:
@@ -69,7 +69,6 @@ services:
     networks:
       sdn_network:
         ipv4_address: 192.168.0.3
-
   handle-classification:
     image: handle-classification:latest
     container_name: handle-classification
@@ -79,13 +78,16 @@ services:
     ports:
       - 5007:5000
     environment:
-      - INFLUXDB_ADMIN_TOKEN=Oj5-XrZQ24Glkaz7ApaVqAXKGrX61oi3T28wcT2o5BkBWemzUyJnyUNoxYv_KghZXpcXxFmz4RZSnwjDUYQoyA==
       - ONOS_USERNAME=onos
       - ONOS_PASSWORD=rocks
       - ONOS_IP=192.168.0.2
       - ONOS_PORT=8181
-      - IS_COLLECT=false #true: collect data, false: not collect data
+      - IS_COLLECT=true #true: collect data, false: not collect data
       - LABEL=web #nhãn gán cho dữ liệu web, video, voip, unknown
+      - MONGODB_HOST=mongodb
+      - MONGODB_PORT=27017
+      - MONGODB_DATABASE=sdn
+      - MONGODB_COLLECTION=traffic
     networks:
       sdn_network:
         ipv4_address: 192.168.0.4
@@ -101,8 +103,20 @@ services:
       sdn_network:
         ipv4_address: 192.168.0.5
 
+  mongodb:
+    image: mongo:latest
+    container_name: mongodb-sdn
+    ports:
+      - 27017:27017
+    volumes:
+      - mongodb_data:/data/db
+    networks:
+      sdn_network:
+        ipv4_address: 192.168.0.6
+
 volumes:
   influxdb_data:
+  mongodb_data:
 networks:
   sdn_network:
     driver: bridge
